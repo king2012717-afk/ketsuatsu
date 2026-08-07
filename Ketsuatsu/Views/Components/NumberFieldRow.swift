@@ -25,7 +25,7 @@ struct NumberFieldRow<Field: Hashable>: View {
             Label {
                 Text(title)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(0.65)
             } icon: {
                 if let systemImage {
                     Image(systemName: systemImage).foregroundStyle(tint)
@@ -39,13 +39,15 @@ struct NumberFieldRow<Field: Hashable>: View {
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
                 .font(.title3.weight(.semibold))
-                .frame(width: 56)
+                .frame(width: 52)
                 .focused($focus, equals: field)
 
+            // 単位は折り返させない。幅が足りないときはタイトル側を縮める。
             Text(unit)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-                .frame(width: 34, alignment: .leading)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
 
             Stepper(
                 "",

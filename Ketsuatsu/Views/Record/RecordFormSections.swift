@@ -18,32 +18,37 @@ struct RecordFormSections: View {
 
     var body: some View {
         Group {
+            // キーボードのバーは入力欄のあるセクションにだけ付ける。
+            // Group に付けると中のセクションごとに適用され、バーが重複して出てしまう。
             valuesSection
+                .toolbar { keyboardToolbar }
             timingSection
             detailSection
         }
-        .toolbar {
-            // テンキーには改行キーがないので、閉じる手段をキーボードの上に置く。
-            ToolbarItemGroup(placement: .keyboard) {
-                Button {
-                    move(by: -1)
-                } label: {
-                    Image(systemName: "chevron.up")
-                }
-                .disabled(focus == nil || focus == .systolic)
+    }
 
-                Button {
-                    move(by: 1)
-                } label: {
-                    Image(systemName: "chevron.down")
-                }
-                .disabled(focus == nil || focus == .pulse)
-
-                Spacer()
-
-                Button("完了") { focus = nil }
-                    .fontWeight(.semibold)
+    /// テンキーには改行キーがないので、閉じる手段をキーボードの上に置く。
+    @ToolbarContentBuilder
+    private var keyboardToolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: .keyboard) {
+            Button {
+                move(by: -1)
+            } label: {
+                Image(systemName: "chevron.up")
             }
+            .disabled(focus == nil || focus == .systolic)
+
+            Button {
+                move(by: 1)
+            } label: {
+                Image(systemName: "chevron.down")
+            }
+            .disabled(focus == nil || focus == .pulse)
+
+            Spacer()
+
+            Button("完了") { focus = nil }
+                .fontWeight(.semibold)
         }
     }
 

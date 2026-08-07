@@ -47,14 +47,22 @@ struct HomeView: View {
             .navigationTitle("うちの血圧記録")
         }
         .addRecordFlow(route: $route, defaultArm: settings.defaultArm)
-        .confirmationDialog("写真から記録", isPresented: $showsPhotoSourceDialog, titleVisibility: .visible) {
-            if CameraPicker.isAvailable {
-                Button("血圧計を撮影する") { route = .camera }
+        .overlay {
+            if showsPhotoSourceDialog {
+                PhotoSourceDialog(
+                    onCamera: {
+                        showsPhotoSourceDialog = false
+                        route = .camera
+                    },
+                    onLibrary: {
+                        showsPhotoSourceDialog = false
+                        route = .photoLibrary
+                    },
+                    onCancel: {
+                        showsPhotoSourceDialog = false
+                    }
+                )
             }
-            Button("写真から選ぶ（複数可）") { route = .photoLibrary }
-            Button("キャンセル", role: .cancel) {}
-        } message: {
-            Text("血圧計の表示から数値を読み取ります。")
         }
     }
 
