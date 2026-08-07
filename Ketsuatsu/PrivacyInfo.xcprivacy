@@ -8,7 +8,12 @@
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 
-	<!-- 収集するデータはない（記録は端末内と、ユーザーが許可した場合のヘルスケアのみ） -->
+	<!--
+	  このアプリ自身が収集するデータはない（記録は端末内と、ユーザーが許可した場合のヘルスケアのみ）。
+	  広告（Google Mobile Ads SDK）が収集するデータは SDK 側のプライバシーマニフェストで宣言される。
+	  App Store Connect の「App のプライバシー」では、SDK 側のぶんも含めて申告すること。
+	  → Store/store-listing.md の「App のプライバシー」を参照
+	-->
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array/>
 

@@ -20,6 +20,16 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-4243897663299237~4523194742</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<!-- Google の広告ネットワーク。他ネットワークの ID は AdMob のドキュメントから追記できる。 -->
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.healthcare-fitness</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

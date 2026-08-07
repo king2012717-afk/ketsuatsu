@@ -1,3 +1,4 @@
+import GoogleMobileAds
 import SwiftData
 import SwiftUI
 import UserNotifications
@@ -28,6 +29,8 @@ struct KetsuatsuApp: App {
                 .environment(reminders)
                 .tint(Theme.brand)
                 .task {
+                    // 広告 SDK の初期化。完了を待たなくてもバナー側で読み込みが始まる。
+                    MobileAds.shared.start(completionHandler: nil)
                     await reminders.installDefaultsIfNeeded()
                     await reminders.refreshAuthorizationStatus()
                     // 通知が許可済みなら、端末の再起動やアプリ更新に備えて登録し直す。

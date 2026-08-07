@@ -14,6 +14,14 @@ struct RootView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+            // 広告は画面上部（各タブのナビゲーションバーの上）に固定する。
+            AdBanner()
+            tabs
+        }
+    }
+
+    private var tabs: some View {
         TabView(selection: $selection) {
             HomeView()
                 .tabItem { Label("ホーム", systemImage: "house.fill") }
