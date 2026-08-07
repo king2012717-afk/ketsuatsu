@@ -24,6 +24,14 @@ enum AppFormatter {
         return formatter
     }()
 
+    /// 長い期間のグラフで使う月の表記（例: 24/10）。
+    static let monthLabel: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = japanese
+        formatter.dateFormat = "yy/M"
+        return formatter
+    }()
+
     static let shortDate: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = japanese

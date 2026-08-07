@@ -87,8 +87,8 @@ struct BPStatistics: Equatable, Sendable {
     }
 }
 
-/// 1 日ぶんの平均値。グラフのならし表示に使う。
-struct DailyAverage: Identifiable, Equatable, Sendable {
+/// ならした 1 点ぶんの値。グラフの折れ線に使う。
+struct AveragePoint: Identifiable, Equatable, Sendable {
     var id: Date { date }
     var date: Date
     var systolic: Double
@@ -97,16 +97,60 @@ struct DailyAverage: Identifiable, Equatable, Sendable {
     var count: Int
 }
 
+/// 平均をまとめる単位。期間が長いときに点が多くなりすぎないよう切り替える。
+enum AggregationUnit: String, CaseIterable, Sendable {
+    case day
+    case week
+    case month
+
+    var title: String {
+        switch self {
+        case .day: return "日ごとの平均"
+        case .week: return "週ごとの平均"
+        case .month: return "月ごとの平均"
+        }
+    }
+
+    func periodStart(for date: Date, calendar: Calendar) -> Date {
+        switch self {
+        case .day:
+            return calendar.startOfDay(for: date)
+        case .week:
+            return calendar.dateInterval(of: .weekOfYear, for: date)?.start ?? calendar.startOfDay(for: date)
+        case .month:
+            return calendar.dateInterval(of: .month, for: date)?.start ?? calendar.startOfDay(for: date)
+        }
+    }
+
+    /// 期間の長さから適切な単位を選ぶ。
+    static func automatic(forDayCount dayCount: Int) -> AggregationUnit {
+        switch dayCount {
+        case ..<46: return .day
+        case ..<201: return .week
+        default: return .month
+        }
+    }
+}
+
 enum BPAggregator {
     /// 日ごとの平均値を古い順で返す。
     static func dailyAverages<M: BPMeasurement>(
         _ measurements: [M],
         calendar: Calendar = .current
-    ) -> [DailyAverage] {
-        let grouped = Dictionary(grouping: measurements) { calendar.startOfDay(for: $0.measuredAt) }
+    ) -> [AveragePoint] {
+        averages(measurements, by: .day, calendar: calendar)
+    }
+
+    /// 指定した単位で平均した値を古い順で返す。
+    static func averages<M: BPMeasurement>(
+        _ measurements: [M],
+        by unit: AggregationUnit,
+        calendar: Calendar = .current
+    ) -> [AveragePoint] {
+        let grouped = Dictionary(grouping: measurements) { unit.periodStart(for: $0.measuredAt, calendar: calendar) }
         return grouped.map { date, items in
             let pulses = items.compactMap(\.pulse)
-            return DailyAverage(
+            return AveragePoint(
                 date: date,
                 systolic: Double(items.map(\.systolic).reduce(0, +)) / Double(items.count),
                 diastolic: Double(items.map(\.diastolic).reduce(0, +)) / Double(items.count),
@@ -115,6 +159,12 @@ enum BPAggregator {
             )
         }
         .sorted { $0.date < $1.date }
+    }
+
+    /// 期間で絞り込む（nil なら全期間）。
+    static func filter<M: BPMeasurement>(_ measurements: [M], in interval: DateInterval?) -> [M] {
+        guard let interval else { return measurements }
+        return measurements.filter { interval.contains($0.measuredAt) }
     }
 
     /// 直近 N 日ぶんの記録だけを取り出す（`days` が nil なら全期間）。

@@ -148,7 +148,7 @@ struct HistoryView: View {
     private var filterMenu: some View {
         Menu {
             Picker("期間", selection: $periodFilter) {
-                ForEach(PeriodFilter.allCases) { period in
+                ForEach(PeriodFilter.standardCases) { period in
                     Text(period.title).tag(period)
                 }
             }
@@ -223,38 +223,6 @@ struct HistoryView: View {
             exportedFile = ExportedFile(url: url)
         } catch {
             exportError = error.localizedDescription
-        }
-    }
-}
-
-/// 期間の絞り込み。グラフ画面とも共有する。
-enum PeriodFilter: String, CaseIterable, Identifiable {
-    case week1
-    case month1
-    case month3
-    case year1
-    case all
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .week1: return "1週間"
-        case .month1: return "1か月"
-        case .month3: return "3か月"
-        case .year1: return "1年"
-        case .all: return "すべて"
-        }
-    }
-
-    /// 集計対象とする日数（nil は全期間）。
-    var days: Int? {
-        switch self {
-        case .week1: return 7
-        case .month1: return 30
-        case .month3: return 90
-        case .year1: return 365
-        case .all: return nil
         }
     }
 }
