@@ -12,6 +12,8 @@ struct BPDraft: Equatable {
     var tookMedication: Bool = false
     var source: RecordSource = .manual
     var photoData: Data?
+    /// 測定日時に写真の撮影日時を使っているか（画面での説明に使う）。
+    var usesPhotoCaptureDate = false
 
     /// 保存できる状態かどうか。
     var isValid: Bool {
@@ -49,7 +51,16 @@ struct BPDraft: Equatable {
     }
 
     /// 写真の読み取り結果から下書きを作る。
-    init(parseResult: BPParseResult, photoData: Data?, measuredAt: Date = Date(), arm: MeasurementArm = .unspecified) {
+    ///
+    /// `capturedAt` に写真の撮影日時を渡すと、それを測定日時として使う。
+    /// あとから写真を選んで記録する場合でも、実際に測った時刻で残せるようにするため。
+    init(
+        parseResult: BPParseResult,
+        photoData: Data?,
+        capturedAt: Date? = nil,
+        arm: MeasurementArm = .unspecified
+    ) {
+        let measuredAt = capturedAt ?? Date()
         self.measuredAt = measuredAt
         self.slot = MeasurementSlot.inferred(from: measuredAt)
         self.arm = arm
@@ -58,5 +69,6 @@ struct BPDraft: Equatable {
         self.pulse = parseResult.pulse
         self.source = .photo
         self.photoData = photoData
+        self.usesPhotoCaptureDate = capturedAt != nil
     }
 }

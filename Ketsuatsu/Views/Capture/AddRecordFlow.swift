@@ -50,7 +50,7 @@ struct AddRecordMenu<LabelContent: View>: View {
             Button {
                 route = .photoLibrary
             } label: {
-                Label("写真から読み取る", systemImage: "photo.on.rectangle")
+                Label("写真から読み取る（複数可）", systemImage: "photo.on.rectangle")
             }
             Button {
                 route = .manual

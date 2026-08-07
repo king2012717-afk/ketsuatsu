@@ -18,7 +18,6 @@ struct RecordEditView: View {
     private let recognizedLines: [String]
 
     @State private var draft: BPDraft
-    @State private var slotEditedManually = false
     @State private var showsDeleteConfirmation = false
     @State private var showsRecognizedText = false
     @State private var isSaving = false
@@ -41,9 +40,7 @@ struct RecordEditView: View {
                 if let ocrResult {
                     ocrSection(ocrResult)
                 }
-                valuesSection
-                timingSection
-                detailSection
+                RecordFormSections(draft: $draft, standard: settings.standard)
                 if let photoData = draft.photoData, let image = UIImage(data: photoData) {
                     photoSection(image)
                 }
@@ -112,104 +109,6 @@ struct RecordEditView: View {
                         .textSelection(.enabled)
                 }
                 .font(.caption)
-            }
-        }
-    }
-
-    private var valuesSection: some View {
-        Section {
-            NumberFieldRow(
-                title: "収縮期（上）",
-                unit: "mmHg",
-                systemImage: "arrow.up.circle.fill",
-                tint: Theme.systolic,
-                range: BPValueRange.systolic,
-                startValue: 120,
-                value: $draft.systolic
-            )
-            NumberFieldRow(
-                title: "拡張期（下）",
-                unit: "mmHg",
-                systemImage: "arrow.down.circle.fill",
-                tint: Theme.diastolic,
-                range: BPValueRange.diastolic,
-                startValue: 80,
-                value: $draft.diastolic
-            )
-            NumberFieldRow(
-                title: "脈拍",
-                unit: "bpm",
-                systemImage: "heart.fill",
-                tint: Theme.pulse,
-                range: BPValueRange.pulse,
-                startValue: 70,
-                value: $draft.pulse
-            )
-
-            if let systolic = draft.systolic, let diastolic = draft.diastolic, draft.isValid {
-                HStack {
-                    Text("判定")
-                    Spacer()
-                    CategoryBadge(
-                        category: BPCategory.classify(
-                            systolic: systolic,
-                            diastolic: diastolic,
-                            standard: settings.standard
-                        )
-                    )
-                }
-            } else if let message = draft.validationMessage {
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        } header: {
-            Text("測定値")
-        } footer: {
-            Text("\(settings.standard.title)の基準で判定しています。")
-        }
-    }
-
-    private var timingSection: some View {
-        Section("測定した日時") {
-            DatePicker(
-                "日時",
-                selection: $draft.measuredAt,
-                in: ...Date().addingTimeInterval(60 * 60),
-                displayedComponents: [.date, .hourAndMinute]
-            )
-            .environment(\.locale, AppFormatter.japanese)
-            .onChange(of: draft.measuredAt) { _, newValue in
-                guard !slotEditedManually else { return }
-                draft.slot = MeasurementSlot.inferred(from: newValue)
-            }
-
-            Picker("時間帯", selection: $draft.slot) {
-                ForEach(MeasurementSlot.allCases) { slot in
-                    Text(slot.title).tag(slot)
-                }
-            }
-            .pickerStyle(.segmented)
-            .onChange(of: draft.slot) { _, _ in slotEditedManually = true }
-        }
-    }
-
-    private var detailSection: some View {
-        Section("詳細") {
-            Picker("測定した腕", selection: $draft.arm) {
-                ForEach(MeasurementArm.allCases) { arm in
-                    Text(arm.title).tag(arm)
-                }
-            }
-            Toggle(isOn: $draft.tookMedication) {
-                Label("薬を飲んだ", systemImage: "pills.fill")
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                Text("メモ")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                TextField("体調や気づいたこと", text: $draft.note, axis: .vertical)
-                    .lineLimit(2...5)
             }
         }
     }

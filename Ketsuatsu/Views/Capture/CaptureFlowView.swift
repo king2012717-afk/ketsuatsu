@@ -5,6 +5,7 @@ import UIKit
 ///
 /// 撮影（または選択）→ 読み取り中 → 確認・保存、と 1 枚のシート内で表示を切り替える。
 /// シートを重ねて出すと iOS 側の表示競合が起きやすいため、あえて画面を差し替える方式にしている。
+/// 写真を複数選んだ場合は、まとめて記録する画面へ進む。
 struct CaptureFlowView: View {
     enum Source: Identifiable {
         case camera
@@ -22,8 +23,9 @@ struct CaptureFlowView: View {
 
     private enum Phase {
         case picking
-        case analyzing(UIImage)
-        case review(UIImage, BPParseResult, [String])
+        case analyzing(PickedPhoto)
+        case review(BPDraft, BPParseResult, [String])
+        case batch([PickedPhoto])
         case failed(String)
     }
 
@@ -33,22 +35,19 @@ struct CaptureFlowView: View {
             picker
                 .ignoresSafeArea()
 
-        case .analyzing(let image):
-            AnalyzingView(image: image) { dismiss() }
-                .task { await analyze(image) }
+        case .analyzing(let photo):
+            AnalyzingView(image: photo.image) { dismiss() }
+                .task { await analyze(photo) }
 
-        case .review(let image, let result, let lines):
+        case .review(let draft, let result, let lines):
             RecordEditView(
-                mode: .create(
-                    BPDraft(
-                        parseResult: result,
-                        photoData: Self.jpegData(from: image),
-                        arm: settings.defaultArm
-                    )
-                ),
+                mode: .create(draft),
                 ocrResult: result,
                 recognizedLines: lines
             )
+
+        case .batch(let photos):
+            BatchImportView(photos: photos, defaultArm: settings.defaultArm)
 
         case .failed(let message):
             FailureView(message: message) {
@@ -63,45 +62,40 @@ struct CaptureFlowView: View {
     private var picker: some View {
         switch source {
         case .camera:
-            CameraPicker { image in
-                handle(image)
+            CameraPicker { photos in
+                handle(photos)
             }
         case .photoLibrary:
-            PhotoLibraryPicker { image in
-                handle(image)
+            PhotoLibraryPicker { photos in
+                handle(photos)
             }
         }
     }
 
-    private func handle(_ image: UIImage?) {
-        guard let image else {
+    private func handle(_ photos: [PickedPhoto]) {
+        switch photos.count {
+        case 0:
             dismiss()
-            return
+        case 1:
+            phase = .analyzing(photos[0])
+        default:
+            phase = .batch(photos)
         }
-        phase = .analyzing(image)
     }
 
-    private func analyze(_ image: UIImage) async {
+    private func analyze(_ photo: PickedPhoto) async {
         do {
-            let output = try await BPImageRecognizer.recognize(image: image)
-            phase = .review(image, output.result, output.recognizedLines)
+            let output = try await BPImageRecognizer.recognize(image: photo.image)
+            let draft = BPDraft(
+                parseResult: output.result,
+                photoData: ImageProcessing.jpegData(from: photo.image),
+                capturedAt: photo.capturedAt,
+                arm: settings.defaultArm
+            )
+            phase = .review(draft, output.result, output.recognizedLines)
         } catch {
             phase = .failed(error.localizedDescription)
         }
-    }
-
-    /// 保存用に長辺 1600px 程度へ縮小した JPEG を作る。
-    static func jpegData(from image: UIImage, maxDimension: CGFloat = 1600, quality: CGFloat = 0.8) -> Data? {
-        let longest = max(image.size.width, image.size.height)
-        guard longest > maxDimension else { return image.jpegData(compressionQuality: quality) }
-
-        let scale = maxDimension / longest
-        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let resized = renderer.image { _ in
-            image.draw(in: CGRect(origin: .zero, size: size))
-        }
-        return resized.jpegData(compressionQuality: quality)
     }
 }
 
