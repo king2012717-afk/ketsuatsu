@@ -12,6 +12,7 @@ struct HomeView: View {
     @Query(sort: \BPRecord.measuredAt, order: .reverse) private var records: [BPRecord]
 
     @State private var route: AddRecordRoute?
+    @State private var showsPhotoSourceDialog = false
 
     private var recentSamples: [BPSample] {
         BPAggregator.filter(records.map(\.sample), days: 7)
@@ -44,16 +45,17 @@ struct HomeView: View {
             }
             .background(Theme.pageBackground)
             .navigationTitle("うちの血圧記録")
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    AddRecordMenu(route: $route) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title3)
-                    }
-                }
-            }
         }
         .addRecordFlow(route: $route, defaultArm: settings.defaultArm)
+        .confirmationDialog("写真から記録", isPresented: $showsPhotoSourceDialog, titleVisibility: .visible) {
+            if CameraPicker.isAvailable {
+                Button("血圧計を撮影する") { route = .camera }
+            }
+            Button("写真から選ぶ（複数可）") { route = .photoLibrary }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("血圧計の表示から数値を読み取ります。")
+        }
     }
 
     // MARK: - 最新の記録
@@ -139,7 +141,7 @@ struct HomeView: View {
     private var actionButtons: some View {
         HStack(spacing: 12) {
             Button {
-                route = CameraPicker.isAvailable ? .camera : .photoLibrary
+                showsPhotoSourceDialog = true
             } label: {
                 VStack(spacing: 6) {
                     Image(systemName: "camera.viewfinder")
