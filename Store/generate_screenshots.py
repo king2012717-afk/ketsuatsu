@@ -10,6 +10,14 @@
 必要なもの:
     pip3 install playwright pillow
     （このリポジトリの開発環境では Chromium のパスを CHROMIUM_PATH で指定できる）
+
+Linux で実行する場合は日本語フォントを入れておくこと。入っていないと中国語字形の
+フォントで描画され、漢字の形が変わってしまう（直・週・録・語 など）。
+
+    apt-get install fonts-noto-cjk
+    もしくは Noto Sans JP を /usr/share/fonts/ に置いて fc-cache -f
+
+macOS ではヒラギノが使われるため、そのままで問題ない。
 """
 
 from __future__ import annotations
