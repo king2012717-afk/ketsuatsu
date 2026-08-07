@@ -8,7 +8,7 @@ struct StatTile: View {
     var unit: String?
     var caption: String?
     var systemImage: String?
-    var tint: Color = .accentColor
+    var tint: Color = Theme.brand
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -41,9 +41,7 @@ struct StatTile: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12))
+        .cardStyle(padding: 12)
     }
 }
 
@@ -53,5 +51,5 @@ struct StatTile: View {
         StatTile(title: "測定回数", value: "12", unit: "回", systemImage: "list.bullet")
     }
     .padding()
-    .background(Color(.systemGroupedBackground))
+    .background(Theme.pageBackground)
 }

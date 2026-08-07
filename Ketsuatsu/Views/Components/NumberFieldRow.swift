@@ -86,7 +86,7 @@ struct NumberFieldRow: View {
             title: "収縮期（上）",
             unit: "mmHg",
             systemImage: "arrow.up.circle.fill",
-            tint: .red,
+            tint: Theme.systolic,
             range: BPValueRange.systolic,
             startValue: 120,
             value: $systolic
@@ -95,7 +95,7 @@ struct NumberFieldRow: View {
             title: "脈拍",
             unit: "bpm",
             systemImage: "heart.fill",
-            tint: .pink,
+            tint: Theme.pulse,
             range: BPValueRange.pulse,
             startValue: 70,
             value: $pulse

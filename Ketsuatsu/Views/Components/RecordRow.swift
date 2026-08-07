@@ -30,7 +30,7 @@ struct RecordRow: View {
                     if let pulse = record.pulse {
                         Text("脈 \(pulse)")
                             .font(.caption)
-                            .foregroundStyle(.pink)
+                            .foregroundStyle(Theme.pulse)
                             .padding(.leading, 4)
                     }
                 }
@@ -51,7 +51,7 @@ struct RecordRow: View {
                 HStack(spacing: 4) {
                     if record.tookMedication {
                         Image(systemName: "pills.fill")
-                            .foregroundStyle(.purple)
+                            .foregroundStyle(Theme.categoryGrade3)
                     }
                     if record.source != .manual {
                         Image(systemName: record.source.symbolName)

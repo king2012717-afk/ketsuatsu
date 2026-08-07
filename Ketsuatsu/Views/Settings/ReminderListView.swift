@@ -16,7 +16,7 @@ struct ReminderListView: View {
                     VStack(alignment: .leading, spacing: 8) {
                         Label("通知が許可されていません", systemImage: "bell.slash.fill")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.orange)
+                            .foregroundStyle(Theme.categoryHigh)
                         Text("リマインダーを受け取るには通知を許可してください。")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -89,7 +89,7 @@ struct ReminderListView: View {
     private func row(for reminder: ReminderItem) -> some View {
         HStack(spacing: 12) {
             Image(systemName: reminder.slot.symbolName)
-                .foregroundStyle(reminder.isEnabled ? Color.accentColor : Color.secondary)
+                .foregroundStyle(reminder.isEnabled ? Theme.brand : Color.secondary)
                 .frame(width: 24)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -166,7 +166,7 @@ struct ReminderEditView: View {
                                 Spacer()
                                 if reminder.weekdays.contains(weekday) {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.accentColor)
+                                        .foregroundStyle(Theme.brand)
                                 }
                             }
                         }

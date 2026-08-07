@@ -26,7 +26,7 @@ struct KetsuatsuApp: App {
             RootView()
                 .environment(settings)
                 .environment(reminders)
-                .tint(.accentColor)
+                .tint(Theme.brand)
                 .task {
                     await reminders.installDefaultsIfNeeded()
                     await reminders.refreshAuthorizationStatus()

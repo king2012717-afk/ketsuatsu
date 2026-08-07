@@ -86,7 +86,7 @@ struct RecordEditView: View {
             HStack(spacing: 12) {
                 Image(systemName: result.hasBloodPressure ? "text.viewfinder" : "exclamationmark.triangle.fill")
                     .font(.title3)
-                    .foregroundStyle(result.hasBloodPressure ? Color.accentColor : .orange)
+                    .foregroundStyle(result.hasBloodPressure ? Theme.brand : Theme.categoryHigh)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(result.hasBloodPressure ? "写真から読み取りました" : "うまく読み取れませんでした")
                         .font(.subheadline.weight(.semibold))
@@ -101,7 +101,7 @@ struct RecordEditView: View {
             if result.confidence < 0.85 && result.hasBloodPressure {
                 Label("値が正しいか確認してください。", systemImage: "eye")
                     .font(.caption)
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Theme.categoryHigh)
             }
 
             if !recognizedLines.isEmpty {
@@ -122,7 +122,7 @@ struct RecordEditView: View {
                 title: "収縮期（上）",
                 unit: "mmHg",
                 systemImage: "arrow.up.circle.fill",
-                tint: .red,
+                tint: Theme.systolic,
                 range: BPValueRange.systolic,
                 startValue: 120,
                 value: $draft.systolic
@@ -131,7 +131,7 @@ struct RecordEditView: View {
                 title: "拡張期（下）",
                 unit: "mmHg",
                 systemImage: "arrow.down.circle.fill",
-                tint: .blue,
+                tint: Theme.diastolic,
                 range: BPValueRange.diastolic,
                 startValue: 80,
                 value: $draft.diastolic
@@ -140,7 +140,7 @@ struct RecordEditView: View {
                 title: "脈拍",
                 unit: "bpm",
                 systemImage: "heart.fill",
-                tint: .pink,
+                tint: Theme.pulse,
                 range: BPValueRange.pulse,
                 startValue: 70,
                 value: $draft.pulse

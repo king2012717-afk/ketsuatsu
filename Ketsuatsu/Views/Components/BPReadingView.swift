@@ -6,6 +6,7 @@ struct BPReadingView: View {
     let diastolic: Int?
     var pulse: Int?
     var size: Size = .large
+    var style: Style = .standard
 
     enum Size {
         case large
@@ -26,21 +27,55 @@ struct BPReadingView: View {
         }
     }
 
+    /// 通常の背景に置くか、ブランドカラーのカードに白抜きで置くか。
+    enum Style {
+        case standard
+        case onBrand
+
+        var systolicColor: Color {
+            switch self {
+            case .standard: return .primary
+            case .onBrand: return .white
+            }
+        }
+
+        var diastolicColor: Color {
+            switch self {
+            case .standard: return .secondary
+            case .onBrand: return .white.opacity(0.85)
+            }
+        }
+
+        var unitColor: Color {
+            switch self {
+            case .standard: return .secondary
+            case .onBrand: return .white.opacity(0.75)
+            }
+        }
+
+        var pulseColor: Color {
+            switch self {
+            case .standard: return Theme.pulse
+            case .onBrand: return .white.opacity(0.9)
+            }
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(text(systolic))
                     .font(size.valueFont)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(style.systolicColor)
                 Text("/")
                     .font(size.separatorFont)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(style.unitColor)
                 Text(text(diastolic))
                     .font(size.valueFont)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(style.diastolicColor)
                 Text("mmHg")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(style.unitColor)
             }
             .monospacedDigit()
             .contentTransition(.numericText())
@@ -48,7 +83,7 @@ struct BPReadingView: View {
             if let pulse {
                 Label("\(pulse) bpm", systemImage: "heart.fill")
                     .font(.caption)
-                    .foregroundStyle(.pink)
+                    .foregroundStyle(style.pulseColor)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -70,6 +105,9 @@ struct BPReadingView: View {
     VStack(alignment: .leading, spacing: 24) {
         BPReadingView(systolic: 128, diastolic: 82, pulse: 68)
         BPReadingView(systolic: nil, diastolic: nil, size: .medium)
+        BPReadingView(systolic: 142, diastolic: 91, pulse: 74, style: .onBrand)
+            .padding()
+            .background(Theme.brandGradientDiagonal, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
     .padding()
 }

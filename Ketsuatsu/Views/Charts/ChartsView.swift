@@ -53,7 +53,7 @@ struct ChartsView: View {
                 .padding(.horizontal)
                 .padding(.bottom, 24)
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Theme.pageBackground)
             .navigationTitle("グラフ")
         }
     }
@@ -125,14 +125,14 @@ struct ChartsView: View {
                 }
 
                 RuleMark(y: .value("目標（上）", settings.targetSystolic))
-                    .foregroundStyle(.red.opacity(0.4))
+                    .foregroundStyle(Theme.systolic.opacity(0.4))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
                 RuleMark(y: .value("目標（下）", settings.targetDiastolic))
-                    .foregroundStyle(.blue.opacity(0.4))
+                    .foregroundStyle(Theme.diastolic.opacity(0.4))
                     .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 4]))
             }
             .chartYScale(domain: .automatic(includesZero: false))
-            .chartForegroundStyleScale(["上": Color.red, "下": Color.blue])
+            .chartForegroundStyleScale(["上": Theme.systolic, "下": Theme.diastolic])
             .frame(height: 240)
         }
     }
@@ -149,7 +149,7 @@ struct ChartsView: View {
                         x: .value("日付", day.date, unit: .day),
                         y: .value("脈拍", day.pulse ?? 0)
                     )
-                    .foregroundStyle(.pink.gradient)
+                    .foregroundStyle(Theme.brandGradient)
                 }
                 .chartYScale(domain: .automatic(includesZero: false))
                 .frame(height: 160)
@@ -172,7 +172,7 @@ struct ChartsView: View {
                     unit: "mmHg",
                     caption: rangeText(min: statistics.minSystolic, max: statistics.maxSystolic),
                     systemImage: "arrow.up.circle.fill",
-                    tint: .red
+                    tint: Theme.systolic
                 )
                 StatTile(
                     title: "平均（下）",
@@ -180,7 +180,7 @@ struct ChartsView: View {
                     unit: "mmHg",
                     caption: rangeText(min: statistics.minDiastolic, max: statistics.maxDiastolic),
                     systemImage: "arrow.down.circle.fill",
-                    tint: .blue
+                    tint: Theme.diastolic
                 )
                 StatTile(
                     title: "測定回数",
@@ -193,7 +193,7 @@ struct ChartsView: View {
                     value: statistics.withinTargetRatio.map(AppFormatter.percent) ?? "--",
                     caption: "高血圧域 \(statistics.hypertensiveRatio.map(AppFormatter.percent) ?? "--")",
                     systemImage: "target",
-                    tint: .green
+                    tint: Theme.categoryNormal
                 )
             }
         }
@@ -243,8 +243,8 @@ struct ChartsView: View {
         if statistics.morningAverage != nil || statistics.eveningAverage != nil {
             ChartCard(title: "朝と晩の平均", subtitle: "家庭血圧は朝晩それぞれの平均で判断します") {
                 VStack(spacing: 12) {
-                    slotRow(title: "朝", pair: statistics.morningAverage, tint: .orange)
-                    slotRow(title: "晩", pair: statistics.eveningAverage, tint: .indigo)
+                    slotRow(title: "朝", pair: statistics.morningAverage, tint: Theme.categoryHigh)
+                    slotRow(title: "晩", pair: statistics.eveningAverage, tint: Theme.diastolic)
 
                     if let difference = statistics.morningEveningDifference {
                         HStack {
@@ -254,7 +254,7 @@ struct ChartsView: View {
                             Spacer()
                             Text("\(AppFormatter.signed(difference)) mmHg")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(abs(difference) >= 15 ? .orange : .primary)
+                                .foregroundStyle(abs(difference) >= 15 ? Theme.categoryHigh : .primary)
                         }
                     }
                 }
@@ -313,8 +313,6 @@ struct ChartCard<Content: View>: View {
             }
             content()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+        .cardStyle(padding: 14)
     }
 }

@@ -84,7 +84,17 @@ struct SettingsView: View {
                 dataSection
 
                 Section {
-                    LabeledContent("バージョン", value: appVersion)
+                    HStack(spacing: 14) {
+                        AppMarkView(size: 52)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("血圧ノート")
+                                .font(.headline)
+                            Text("バージョン \(appVersion)")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.vertical, 4)
                 } header: {
                     Text("このアプリについて")
                 } footer: {

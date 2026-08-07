@@ -117,10 +117,10 @@ private struct AnalyzingView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxHeight: 260)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.accentColor.opacity(0.4), lineWidth: 2)
+                        RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous)
+                            .strokeBorder(Theme.brand.opacity(0.4), lineWidth: 2)
                     )
 
                 ProgressView()

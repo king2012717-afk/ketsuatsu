@@ -61,15 +61,16 @@ enum BPCategory: Int, CaseIterable, Comparable, Identifiable, Sendable {
         }
     }
 
+    /// 緑 → 琥珀 → コーラル（アイコンと同色）→ ベリー、と段階的に濃くなる配色。
     var color: Color {
         switch self {
-        case .low: return .teal
-        case .normal: return .green
-        case .elevated: return .mint
-        case .high: return .yellow
-        case .grade1: return .orange
-        case .grade2: return .red
-        case .grade3: return .purple
+        case .low: return Theme.categoryLow
+        case .normal: return Theme.categoryNormal
+        case .elevated: return Theme.categoryElevated
+        case .high: return Theme.categoryHigh
+        case .grade1: return Theme.categoryGrade1
+        case .grade2: return Theme.categoryGrade2
+        case .grade3: return Theme.categoryGrade3
         }
     }
 
