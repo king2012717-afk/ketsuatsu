@@ -22,6 +22,16 @@ struct KetsuatsuApp: App {
         }
     }()
 
+    init() {
+        // バナーの読み込みより前に済ませておく必要があるため、画面の表示を待たずにここで初期化する。
+        MobileAds.shared.start { status in
+            let adapters = status.adapterStatusesByClassName
+                .map { "\($0.key): \($0.value.state == .ready ? "ready" : "not ready")" }
+                .joined(separator: ", ")
+            AdConfiguration.log("SDK の初期化が完了しました（\(adapters)）")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -29,8 +39,6 @@ struct KetsuatsuApp: App {
                 .environment(reminders)
                 .tint(Theme.brand)
                 .task {
-                    // 広告 SDK の初期化。完了を待たなくてもバナー側で読み込みが始まる。
-                    MobileAds.shared.start(completionHandler: nil)
                     await reminders.installDefaultsIfNeeded()
                     await reminders.refreshAuthorizationStatus()
                     // 通知が許可済みなら、端末の再起動やアプリ更新に備えて登録し直す。

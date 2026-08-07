@@ -25,4 +25,11 @@ enum AdConfiguration {
 
     /// 広告を表示するかどうか。将来「広告を消す」課金を入れる場合はここを見に行く。
     static var isEnabled: Bool { true }
+
+    /// 広告まわりのログ。読み込めないときの切り分け用に Debug ビルドだけ出す。
+    static func log(_ message: String) {
+        #if DEBUG
+        print("[AdBanner] \(message)")
+        #endif
+    }
 }
