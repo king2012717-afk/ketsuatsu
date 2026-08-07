@@ -18,7 +18,7 @@ struct HistoryView: View {
     @State private var exportError: String?
 
     private enum SlotFilter: String, CaseIterable, Identifiable {
-        case all, morning, evening
+        case all, morning, noon, evening
 
         var id: String { rawValue }
 
@@ -26,6 +26,7 @@ struct HistoryView: View {
             switch self {
             case .all: return "すべて"
             case .morning: return "朝"
+            case .noon: return "昼"
             case .evening: return "晩"
             }
         }
@@ -34,6 +35,7 @@ struct HistoryView: View {
             switch self {
             case .all: return nil
             case .morning: return .morning
+            case .noon: return .noon
             case .evening: return .evening
             }
         }

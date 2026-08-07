@@ -2,65 +2,18 @@ import Foundation
 import Observation
 import UserNotifications
 
-/// 測定リマインダー 1 件ぶんの設定。
-struct ReminderItem: Identifiable, Codable, Hashable, Sendable {
-    var id: UUID = UUID()
-    var hour: Int
-    var minute: Int
-    /// 1 = 日曜 … 7 = 土曜（`Calendar` の weekday に合わせる）。空 or 全選択なら毎日。
-    var weekdays: Set<Int> = Set(1...7)
-    var slot: MeasurementSlot = .morning
-    var isEnabled: Bool = true
-
-    var isEveryday: Bool { weekdays.count >= 7 || weekdays.isEmpty }
-
-    var timeText: String {
-        String(format: "%02d:%02d", hour, minute)
-    }
-
-    var weekdayText: String {
-        guard !isEveryday else { return "毎日" }
-        let symbols = ["日", "月", "火", "水", "木", "金", "土"]
-        return weekdays.sorted()
-            .compactMap { index -> String? in
-                guard (1...7).contains(index) else { return nil }
-                return symbols[index - 1]
-            }
-            .joined(separator: "・")
-    }
-
-    /// 次に通知される日時（有効なもののみ）。
-    func nextTriggerDate(after date: Date = Date(), calendar: Calendar = .current) -> Date? {
-        guard isEnabled else { return nil }
-        let targetWeekdays = isEveryday ? Set(1...7) : weekdays
-        return (0...7).compactMap { offset -> Date? in
-            guard let day = calendar.date(byAdding: .day, value: offset, to: date) else { return nil }
-            var components = calendar.dateComponents([.year, .month, .day], from: day)
-            components.hour = hour
-            components.minute = minute
-            guard let candidate = calendar.date(from: components), candidate > date else { return nil }
-            return targetWeekdays.contains(calendar.component(.weekday, from: candidate)) ? candidate : nil
-        }
-        .min()
-    }
-
-    static func defaultMorning() -> ReminderItem {
-        ReminderItem(hour: 7, minute: 0, slot: .morning)
-    }
-
-    static func defaultEvening() -> ReminderItem {
-        ReminderItem(hour: 21, minute: 0, slot: .evening)
-    }
-}
-
-/// リマインダーの保存と通知スケジュールの同期を担当する。
+/// 通知スケジュールの保存と、iOS への通知登録を担当する。
 @MainActor
 @Observable
 final class ReminderStore {
-    private static let storageKey = "reminders.v1"
+    private static let storageKey = "reminderSchedule.v2"
+    private static let legacyStorageKey = "reminders.v1"
     private static let notificationPrefix = "bp-reminder"
 
-    private(set) var reminders: [ReminderItem] = []
+    /// iOS が保持できる保留中の通知はアプリごとに 64 件。他の用途の余地も残して上限を決めている。
+    static let notificationLimit = 60
+
+    private(set) var schedule: ReminderSchedule
     private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
 
     private let defaults: UserDefaults
@@ -69,19 +22,45 @@ final class ReminderStore {
     init(defaults: UserDefaults = .standard, center: UNUserNotificationCenter = .current()) {
         self.defaults = defaults
         self.center = center
-        self.reminders = Self.load(from: defaults)
+        self.schedule = Self.load(from: defaults)
     }
 
-    var nextReminderDate: Date? {
-        reminders.compactMap { $0.nextTriggerDate() }.min()
+    var nextReminderDate: Date? { schedule.nextTriggerDate() }
+
+    /// 通知の登録件数が上限を超えているか（超えた分は登録されない）。
+    var exceedsNotificationLimit: Bool {
+        schedule.isEnabled && schedule.notificationRequestCount > Self.notificationLimit
     }
+
+    var isAuthorized: Bool {
+        authorizationStatus == .authorized || authorizationStatus == .provisional
+    }
+
+    // MARK: - 編集
+
+    /// スケジュールを書き換え、保存と通知の登録し直しまで行う。
+    func modify(_ transform: (inout ReminderSchedule) -> Void) {
+        var updated = schedule
+        transform(&updated)
+        guard updated != schedule else { return }
+        schedule = updated
+        persist()
+        Task { await synchronize() }
+    }
+
+    /// 初回起動時に既定のスケジュール（朝・昼・晩の 1 日 3 回）を用意する。
+    func installDefaultsIfNeeded() async {
+        guard defaults.object(forKey: Self.storageKey) == nil else { return }
+        persist()
+        await synchronize()
+    }
+
+    // MARK: - 通知の許可
 
     func refreshAuthorizationStatus() async {
-        let settings = await center.notificationSettings()
-        authorizationStatus = settings.authorizationStatus
+        authorizationStatus = await center.notificationSettings().authorizationStatus
     }
 
-    /// 通知の許可を求める。許可されたらその場でスケジュールし直す。
     @discardableResult
     func requestAuthorization() async -> Bool {
         let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
@@ -90,120 +69,147 @@ final class ReminderStore {
         return granted
     }
 
-    // MARK: - 編集
-
-    func add(_ reminder: ReminderItem) async {
-        reminders.append(reminder)
-        sort()
-        await persistAndSync()
-    }
-
-    func update(_ reminder: ReminderItem) async {
-        guard let index = reminders.firstIndex(where: { $0.id == reminder.id }) else { return }
-        reminders[index] = reminder
-        sort()
-        await persistAndSync()
-    }
-
-    func remove(at offsets: IndexSet) async {
-        reminders.remove(atOffsets: offsets)
-        await persistAndSync()
-    }
-
-    func remove(id: UUID) async {
-        reminders.removeAll { $0.id == id }
-        await persistAndSync()
-    }
-
-    func setEnabled(_ isEnabled: Bool, for id: UUID) async {
-        guard let index = reminders.firstIndex(where: { $0.id == id }) else { return }
-        reminders[index].isEnabled = isEnabled
-        await persistAndSync()
-    }
-
-    /// 初回起動時に朝・晩の既定リマインダーを用意する（通知は無効のまま）。
-    func installDefaultsIfNeeded() async {
-        guard defaults.object(forKey: Self.storageKey) == nil else { return }
-        reminders = [.defaultMorning(), .defaultEvening()]
-        await persistAndSync()
-    }
-
     // MARK: - 通知スケジュール
 
     /// 登録済みの通知をすべて作り直す。
     func synchronize() async {
         let pending = await center.pendingNotificationRequests()
         let identifiers = pending.map(\.identifier).filter { $0.hasPrefix(Self.notificationPrefix) }
-        center.removePendingNotificationRequests(withIdentifiers: identifiers)
-
-        let settings = await center.notificationSettings()
-        authorizationStatus = settings.authorizationStatus
-        guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
-            return
+        if !identifiers.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: identifiers)
         }
 
-        for reminder in reminders where reminder.isEnabled {
-            for request in Self.makeRequests(for: reminder) {
-                try? await center.add(request)
-            }
+        await refreshAuthorizationStatus()
+        guard isAuthorized else { return }
+
+        for request in Self.makeRequests(for: schedule) {
+            try? await center.add(request)
         }
     }
 
-    /// リマインダー 1 件ぶんの通知リクエストを作る（純粋な変換なのでどこからでも呼べる）。
-    nonisolated static func makeRequests(for reminder: ReminderItem) -> [UNNotificationRequest] {
+    /// スケジュールから通知リクエストを組み立てる（純粋な変換なのでどこからでも呼べる）。
+    ///
+    /// 「まとめて」は曜日を指定しない毎日の繰り返し通知にまとめ、
+    /// 「曜日ごと」は曜日 × 時刻ぶんの繰り返し通知を作る。
+    nonisolated static func makeRequests(
+        for schedule: ReminderSchedule,
+        limit: Int = notificationLimit
+    ) -> [UNNotificationRequest] {
+        guard schedule.isEnabled else { return [] }
+
+        /// 上限で切るときの優先順位。1 日のうち早い時刻から残す。
+        var entries: [(priority: Int, request: UNNotificationRequest)] = []
+
+        switch schedule.mode {
+        case .uniform:
+            for time in schedule.times(forEditing: nil) where time.isEnabled {
+                var components = DateComponents()
+                components.hour = time.hour
+                components.minute = time.minute
+                entries.append((
+                    time.minutesFromMidnight,
+                    makeRequest(
+                        identifier: "\(notificationPrefix).\(time.id.uuidString)",
+                        time: time,
+                        components: components
+                    )
+                ))
+            }
+
+        case .perWeekday:
+            for weekday in ReminderSchedule.allWeekdays {
+                for time in schedule.times(for: weekday) where time.isEnabled {
+                    var components = DateComponents()
+                    components.weekday = weekday
+                    components.hour = time.hour
+                    components.minute = time.minute
+                    entries.append((
+                        time.minutesFromMidnight * 10 + weekday,
+                        makeRequest(
+                            identifier: "\(notificationPrefix).\(weekday).\(time.id.uuidString)",
+                            time: time,
+                            components: components
+                        )
+                    ))
+                }
+            }
+        }
+
+        guard entries.count > limit else { return entries.map(\.request) }
+        // どの曜日も朝の通知が残るように、曜日単位ではなく時刻順で切る。
+        return entries
+            .sorted { $0.priority < $1.priority }
+            .prefix(limit)
+            .map(\.request)
+    }
+
+    private nonisolated static func makeRequest(
+        identifier: String,
+        time: ReminderTime,
+        components: DateComponents
+    ) -> UNNotificationRequest {
         let content = UNMutableNotificationContent()
         content.title = "血圧を測る時間です"
-        content.body = "\(reminder.slot.title)の血圧を記録しましょう。"
+        content.body = "\(time.slot.title)の血圧を記録しましょう。"
         content.sound = .default
 
-        var components = DateComponents()
-        components.hour = reminder.hour
-        components.minute = reminder.minute
-
-        if reminder.isEveryday {
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
-            return [
-                UNNotificationRequest(
-                    identifier: "\(notificationPrefix).\(reminder.id.uuidString)",
-                    content: content,
-                    trigger: trigger
-                )
-            ]
-        }
-
-        return reminder.weekdays.sorted().map { weekday in
-            var weekdayComponents = components
-            weekdayComponents.weekday = weekday
-            let trigger = UNCalendarNotificationTrigger(dateMatching: weekdayComponents, repeats: true)
-            return UNNotificationRequest(
-                identifier: "\(notificationPrefix).\(reminder.id.uuidString).\(weekday)",
-                content: content,
-                trigger: trigger
-            )
-        }
+        return UNNotificationRequest(
+            identifier: identifier,
+            content: content,
+            trigger: UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        )
     }
 
     // MARK: - 永続化
 
-    private func persistAndSync() async {
-        persist()
-        await synchronize()
-    }
-
     private func persist() {
-        guard let data = try? JSONEncoder().encode(reminders) else { return }
+        guard let data = try? JSONEncoder().encode(schedule) else { return }
         defaults.set(data, forKey: Self.storageKey)
     }
 
-    private func sort() {
-        reminders.sort { ($0.hour, $0.minute) < ($1.hour, $1.minute) }
+    private static func load(from defaults: UserDefaults) -> ReminderSchedule {
+        if let data = defaults.data(forKey: storageKey),
+           let schedule = try? JSONDecoder().decode(ReminderSchedule.self, from: data) {
+            return schedule
+        }
+        if let migrated = migrateLegacySchedule(from: defaults) {
+            return migrated
+        }
+        return .standard
     }
 
-    private static func load(from defaults: UserDefaults) -> [ReminderItem] {
-        guard let data = defaults.data(forKey: storageKey),
-              let items = try? JSONDecoder().decode([ReminderItem].self, from: data) else {
-            return []
+    /// 旧バージョン（時刻＋曜日の一覧）で保存された設定を、新しいスケジュールへ変換する。
+    private static func migrateLegacySchedule(from defaults: UserDefaults) -> ReminderSchedule? {
+        struct LegacyReminder: Codable {
+            var hour: Int
+            var minute: Int
+            var weekdays: Set<Int>
+            var slot: MeasurementSlot
+            var isEnabled: Bool
         }
-        return items
+
+        guard let data = defaults.data(forKey: legacyStorageKey),
+              let legacy = try? JSONDecoder().decode([LegacyReminder].self, from: data),
+              !legacy.isEmpty else {
+            return nil
+        }
+
+        let isEveryday = legacy.allSatisfy { $0.weekdays.count >= 7 || $0.weekdays.isEmpty }
+        var schedule = ReminderSchedule(isEnabled: true, mode: isEveryday ? .uniform : .perWeekday)
+
+        if isEveryday {
+            schedule.uniformTimes = legacy.map {
+                ReminderTime(hour: $0.hour, minute: $0.minute, slot: $0.slot, isEnabled: $0.isEnabled)
+            }
+        } else {
+            for weekday in ReminderSchedule.allWeekdays {
+                schedule.weekdayTimes[weekday] = legacy
+                    .filter { $0.weekdays.isEmpty || $0.weekdays.contains(weekday) }
+                    .map { ReminderTime(hour: $0.hour, minute: $0.minute, slot: $0.slot, isEnabled: $0.isEnabled) }
+            }
+        }
+
+        defaults.removeObject(forKey: legacyStorageKey)
+        return schedule
     }
 }

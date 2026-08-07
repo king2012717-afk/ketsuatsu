@@ -313,7 +313,7 @@ struct HomeView: View {
                 Image(systemName: "bell.badge.fill")
                     .foregroundStyle(Theme.brand)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("次のリマインダー")
+                    Text("次のリマインダー・\(reminders.schedule.summaryText)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Text(AppFormatter.dateTime.string(from: next))

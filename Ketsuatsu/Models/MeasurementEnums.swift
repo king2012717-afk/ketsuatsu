@@ -4,6 +4,7 @@ import Foundation
 /// 記録ごとに保持して集計・グラフで区別できるようにしている。
 enum MeasurementSlot: String, CaseIterable, Codable, Identifiable, Sendable {
     case morning
+    case noon
     case evening
     case other
 
@@ -12,6 +13,7 @@ enum MeasurementSlot: String, CaseIterable, Codable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .morning: return "朝"
+        case .noon: return "昼"
         case .evening: return "晩"
         case .other: return "その他"
         }
@@ -20,16 +22,21 @@ enum MeasurementSlot: String, CaseIterable, Codable, Identifiable, Sendable {
     var symbolName: String {
         switch self {
         case .morning: return "sunrise.fill"
+        case .noon: return "sun.max.fill"
         case .evening: return "moon.stars.fill"
         case .other: return "clock"
         }
     }
 
-    /// 測定時刻から時間帯を推定する。朝は 3:00〜10:59、晩は 17:00〜翌 2:59。
+    /// 測定時刻から時間帯を推定する。朝は 3:00〜10:59、昼は 11:00〜16:59、晩は 17:00〜翌 2:59。
     static func inferred(from date: Date, calendar: Calendar = .current) -> MeasurementSlot {
-        let hour = calendar.component(.hour, from: date)
+        inferred(fromHour: calendar.component(.hour, from: date))
+    }
+
+    static func inferred(fromHour hour: Int) -> MeasurementSlot {
         switch hour {
         case 3..<11: return .morning
+        case 11..<17: return .noon
         case 17..<24, 0..<3: return .evening
         default: return .other
         }

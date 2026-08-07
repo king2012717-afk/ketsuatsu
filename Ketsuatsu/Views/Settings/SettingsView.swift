@@ -62,12 +62,16 @@ struct SettingsView: View {
                     Text("この値以下の記録を「目標達成」として集計します。治療中の方は主治医の指示に従ってください。")
                 }
 
-                Section("リマインダー") {
+                Section {
                     NavigationLink {
-                        ReminderListView()
+                        ReminderScheduleView()
                     } label: {
-                        LabeledContent("測定のお知らせ", value: reminderSummary)
+                        LabeledContent("測定のお知らせ", value: reminders.schedule.summaryText)
                     }
+                } header: {
+                    Text("リマインダー")
+                } footer: {
+                    Text("1 日に何回でも設定できます。曜日ごとに時刻を変えることもできます。")
                 }
 
                 healthKitSection
@@ -188,12 +192,6 @@ struct SettingsView: View {
     }
 
     // MARK: - 表示用の値
-
-    private var reminderSummary: String {
-        let enabled = reminders.reminders.filter(\.isEnabled)
-        guard !enabled.isEmpty else { return "オフ" }
-        return enabled.map(\.timeText).joined(separator: ", ")
-    }
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"

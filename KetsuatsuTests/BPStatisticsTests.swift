@@ -140,8 +140,11 @@ final class BPStatisticsTests: XCTestCase {
     func testSlotInference() {
         XCTAssertEqual(MeasurementSlot.inferred(from: date(1, hour: 7), calendar: calendar), .morning)
         XCTAssertEqual(MeasurementSlot.inferred(from: date(1, hour: 21), calendar: calendar), .evening)
-        XCTAssertEqual(MeasurementSlot.inferred(from: date(1, hour: 14), calendar: calendar), .other)
+        XCTAssertEqual(MeasurementSlot.inferred(from: date(1, hour: 14), calendar: calendar), .noon)
         XCTAssertEqual(MeasurementSlot.inferred(from: date(1, hour: 1), calendar: calendar), .evening)
+        XCTAssertEqual(MeasurementSlot.inferred(fromHour: 10), .morning)
+        XCTAssertEqual(MeasurementSlot.inferred(fromHour: 11), .noon)
+        XCTAssertEqual(MeasurementSlot.inferred(fromHour: 17), .evening)
     }
 
     func testDerivedValues() {
