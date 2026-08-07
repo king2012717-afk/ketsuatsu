@@ -48,6 +48,7 @@ struct RecordEditView: View {
                     deleteSection
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(isEditing ? "記録を編集" : "血圧を記録")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

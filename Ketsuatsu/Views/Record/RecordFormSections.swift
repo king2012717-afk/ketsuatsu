@@ -6,7 +6,15 @@ struct RecordFormSections: View {
     @Binding var draft: BPDraft
     var standard: BPStandard
 
+    /// 数値入力欄の並び。キーボードの上下ボタンでこの順に移動する。
+    private enum Field: Int, Hashable, CaseIterable {
+        case systolic
+        case diastolic
+        case pulse
+    }
+
     @State private var slotEditedManually = false
+    @FocusState private var focus: Field?
 
     var body: some View {
         Group {
@@ -14,6 +22,38 @@ struct RecordFormSections: View {
             timingSection
             detailSection
         }
+        .toolbar {
+            // テンキーには改行キーがないので、閉じる手段をキーボードの上に置く。
+            ToolbarItemGroup(placement: .keyboard) {
+                Button {
+                    move(by: -1)
+                } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .disabled(focus == nil || focus == .systolic)
+
+                Button {
+                    move(by: 1)
+                } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .disabled(focus == nil || focus == .pulse)
+
+                Spacer()
+
+                Button("完了") { focus = nil }
+                    .fontWeight(.semibold)
+            }
+        }
+    }
+
+    /// キーボードを出したまま、次（前）の入力欄へ移る。
+    private func move(by offset: Int) {
+        guard let current = focus,
+              let index = Field.allCases.firstIndex(of: current) else { return }
+        let target = index + offset
+        guard Field.allCases.indices.contains(target) else { return }
+        focus = Field.allCases[target]
     }
 
     private var valuesSection: some View {
@@ -25,7 +65,9 @@ struct RecordFormSections: View {
                 tint: Theme.systolic,
                 range: BPValueRange.systolic,
                 startValue: 120,
-                value: $draft.systolic
+                value: $draft.systolic,
+                field: .systolic,
+                focus: $focus
             )
             NumberFieldRow(
                 title: "拡張期（下）",
@@ -34,7 +76,9 @@ struct RecordFormSections: View {
                 tint: Theme.diastolic,
                 range: BPValueRange.diastolic,
                 startValue: 80,
-                value: $draft.diastolic
+                value: $draft.diastolic,
+                field: .diastolic,
+                focus: $focus
             )
             NumberFieldRow(
                 title: "脈拍",
@@ -43,7 +87,9 @@ struct RecordFormSections: View {
                 tint: Theme.pulse,
                 range: BPValueRange.pulse,
                 startValue: 70,
-                value: $draft.pulse
+                value: $draft.pulse,
+                field: .pulse,
+                focus: $focus
             )
 
             if let systolic = draft.systolic, let diastolic = draft.diastolic, draft.isValid {

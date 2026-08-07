@@ -2,7 +2,9 @@ import SwiftUI
 
 /// 数値をキーボードでも +/− ボタンでも入力できる行。
 /// 血圧の入力は 1 ずつ調整したい場面が多いのでステッパーを併設している。
-struct NumberFieldRow: View {
+///
+/// キーボードの「完了」ボタンを 1 か所にまとめるため、フォーカスは呼び出し側が持つ。
+struct NumberFieldRow<Field: Hashable>: View {
     let title: String
     let unit: String
     var systemImage: String?
@@ -12,35 +14,38 @@ struct NumberFieldRow: View {
     /// 未入力の状態で +/− を押したときの起点。
     var startValue: Int?
     @Binding var value: Int?
+    /// この行が対応するフォーカス位置。
+    var field: Field
+    @FocusState.Binding var focus: Field?
 
     @State private var text: String = ""
-    @FocusState private var isFocused: Bool
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) {
             Label {
                 Text(title)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             } icon: {
                 if let systemImage {
                     Image(systemName: systemImage).foregroundStyle(tint)
                 }
             }
-            .font(.body)
 
-            Spacer(minLength: 8)
+            Spacer(minLength: 4)
 
             TextField(placeholder, text: $text)
                 .keyboardType(.numberPad)
                 .multilineTextAlignment(.trailing)
                 .monospacedDigit()
                 .font(.title3.weight(.semibold))
-                .frame(width: 68)
-                .focused($isFocused)
+                .frame(width: 56)
+                .focused($focus, equals: field)
 
             Text(unit)
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(.secondary)
-                .frame(width: 40, alignment: .leading)
+                .frame(width: 34, alignment: .leading)
 
             Stepper(
                 "",
@@ -67,8 +72,7 @@ struct NumberFieldRow: View {
 
     private func adjust(by delta: Int) {
         let base = value ?? defaultValue
-        let updated = min(max(base + delta, range.lowerBound), range.upperBound)
-        value = updated
+        value = min(max(base + delta, range.lowerBound), range.upperBound)
     }
 
     private var defaultValue: Int {
@@ -80,6 +84,7 @@ struct NumberFieldRow: View {
 #Preview {
     @Previewable @State var systolic: Int? = 128
     @Previewable @State var pulse: Int?
+    @Previewable @FocusState var focus: Int?
 
     Form {
         NumberFieldRow(
@@ -89,7 +94,9 @@ struct NumberFieldRow: View {
             tint: Theme.systolic,
             range: BPValueRange.systolic,
             startValue: 120,
-            value: $systolic
+            value: $systolic,
+            field: 0,
+            focus: $focus
         )
         NumberFieldRow(
             title: "脈拍",
@@ -98,7 +105,9 @@ struct NumberFieldRow: View {
             tint: Theme.pulse,
             range: BPValueRange.pulse,
             startValue: 70,
-            value: $pulse
+            value: $pulse,
+            field: 1,
+            focus: $focus
         )
     }
 }

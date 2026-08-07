@@ -260,6 +260,7 @@ struct BatchItemEditView: View {
                 }
                 RecordFormSections(draft: $draft, standard: standard)
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("内容を修正")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

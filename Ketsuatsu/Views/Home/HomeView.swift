@@ -45,9 +45,6 @@ struct HomeView: View {
             .background(Theme.pageBackground)
             .navigationTitle("うちの血圧記録")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    AppMarkView(size: 30)
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     AddRecordMenu(route: $route) {
                         Image(systemName: "plus.circle.fill")
