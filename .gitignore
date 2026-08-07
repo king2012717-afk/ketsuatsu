@@ -24,3 +24,7 @@ Carthage/Build/
 # fastlane
 fastlane/report.xml
 fastlane/screenshots/
+
+# ストア用スクリーンショットの差し替え元（各自のローカルのみ）
+Store/raw/*.png
+Store/_screenshots.html

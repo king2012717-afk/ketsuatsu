@@ -340,7 +340,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.Ketsuatsu;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -363,7 +363,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.Ketsuatsu;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -378,7 +378,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.KetsuatsuTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ketsuatsu.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ketsuatsu";
 			};
 			name = Debug;
@@ -394,7 +394,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.KetsuatsuTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ketsuatsu.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Ketsuatsu";
 			};
 			name = Release;

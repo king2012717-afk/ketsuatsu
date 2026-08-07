@@ -1,0 +1,1047 @@
+<title>うちの血圧記録 — 画面イメージ</title>
+<style>
+  /* ── ページの配色トークン ───────────────────────────────
+     ニュートラルはアプリのコーラルへわずかに寄せた暖色系。 */
+  :root {
+    --ground: #FBF8F8;
+    --surface: #FFFFFF;
+    --surface-2: #F5EFF0;
+    --ink: #241B1D;
+    --ink-2: #57494C;
+    --muted: #8A7A7D;
+    --hairline: #EBDFE1;
+    --accent: #F35064;
+    --accent-ink: #C0293D;
+    --accent-soft: #FDECEE;
+    --shadow: 0 24px 50px -30px rgba(70, 20, 28, .55);
+    --device-shell: #E3D9DA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #151011;
+      --surface: #201A1B;
+      --surface-2: #2A2223;
+      --ink: #F6EEEF;
+      --ink-2: #CBBCBE;
+      --muted: #9C8C8F;
+      --hairline: #352B2D;
+      --accent: #FA6578;
+      --accent-ink: #FF8B99;
+      --accent-soft: #2F1F22;
+      --shadow: 0 24px 50px -28px rgba(0, 0, 0, .8);
+      --device-shell: #3A2F31;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #151011;
+    --surface: #201A1B;
+    --surface-2: #2A2223;
+    --ink: #F6EEEF;
+    --ink-2: #CBBCBE;
+    --muted: #9C8C8F;
+    --hairline: #352B2D;
+    --accent: #FA6578;
+    --accent-ink: #FF8B99;
+    --accent-soft: #2F1F22;
+    --shadow: 0 24px 50px -28px rgba(0, 0, 0, .8);
+    --device-shell: #3A2F31;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+      "Noto Sans JP", "Yu Gothic UI", Meiryo, system-ui, sans-serif;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* ── 見出し ───────────────────────────── */
+  .masthead { padding: 72px 0 40px; border-bottom: 1px solid var(--hairline); }
+  .masthead-inner { display: flex; gap: 28px; align-items: flex-start; flex-wrap: wrap; }
+  .masthead img { width: 76px; height: 76px; border-radius: 18px; box-shadow: var(--shadow); }
+  .masthead-text { flex: 1 1 420px; }
+  .eyebrow {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .72rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--accent-ink); margin: 0 0 10px;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 2.9rem); font-weight: 800; letter-spacing: -.035em;
+    line-height: 1.15; margin: 0 0 14px; text-wrap: balance;
+  }
+  .lede { font-size: 1.05rem; color: var(--ink-2); margin: 0; max-width: 60ch; }
+  .note {
+    margin: 22px 0 0; padding: 14px 16px; border-left: 3px solid var(--accent);
+    background: var(--accent-soft); color: var(--ink-2); font-size: .9rem; border-radius: 0 8px 8px 0;
+    max-width: 68ch;
+  }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0; padding: 0; list-style: none; }
+  .meta li {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem;
+    padding: 5px 10px; border: 1px solid var(--hairline); border-radius: 999px; color: var(--muted);
+  }
+
+  /* ── セクション ───────────────────────── */
+  .group { padding: 56px 0 8px; }
+  .group + .group { border-top: 1px solid var(--hairline); }
+  .group-head { max-width: 60ch; margin-bottom: 32px; }
+  h2 { font-size: 1.55rem; font-weight: 700; letter-spacing: -.02em; margin: 0 0 8px; }
+  .group-head p { margin: 0; color: var(--ink-2); font-size: .96rem; }
+
+  .screens { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 44px 32px; }
+  figure { margin: 0; display: flex; flex-direction: column; gap: 18px; align-items: center; }
+  figcaption { width: 100%; max-width: 400px; }
+  .cap-title { font-weight: 700; font-size: 1.02rem; margin: 0 0 6px; }
+  .cap-list { margin: 0; padding-left: 1.1em; color: var(--ink-2); font-size: .88rem; line-height: 1.65; }
+  .cap-list li + li { margin-top: 3px; }
+  .cap-src {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .7rem;
+    color: var(--muted); margin: 10px 0 0; word-break: break-all;
+  }
+
+  /* ── 端末フレーム ─────────────────────── */
+  .scaler { --s: 1; width: calc(414px * var(--s)); height: calc(868px * var(--s)); }
+  .device {
+    width: 414px; height: 868px; padding: 12px; border-radius: 56px;
+    background: var(--device-shell); box-shadow: var(--shadow);
+    transform: scale(var(--s)); transform-origin: top left;
+  }
+  @media (max-width: 460px) { .scaler { --s: .78; } }
+  @media (max-width: 380px) { .scaler { --s: .68; } }
+
+  /* 端末の中はアプリのライト表示を再現するため、意図的に固定色で描いている */
+  .ios {
+    width: 390px; height: 844px; border-radius: 44px; overflow: hidden;
+    background: #F2F2F7; color: #000; position: relative;
+    display: flex; flex-direction: column;
+    font-size: 15px; line-height: 1.35;
+  }
+  .statusbar {
+    height: 50px; padding: 14px 28px 0; display: flex; justify-content: space-between;
+    align-items: center; font-size: 14px; font-weight: 600; color: #000; flex: none;
+  }
+  .statusbar .sb-right { display: flex; align-items: center; gap: 5px; }
+  .bars { display: flex; align-items: flex-end; gap: 2px; height: 11px; }
+  .bars i { width: 3px; background: #000; border-radius: 1px; }
+  .bars i:nth-child(1) { height: 4px; }
+  .bars i:nth-child(2) { height: 6px; }
+  .bars i:nth-child(3) { height: 8px; }
+  .bars i:nth-child(4) { height: 11px; }
+  .batt { width: 24px; height: 12px; border: 1.2px solid #000; border-radius: 3px; padding: 1.5px; }
+  .batt span { display: block; height: 100%; width: 72%; background: #000; border-radius: 1px; }
+
+  .navbar {
+    padding: 4px 16px 8px; display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; flex: none;
+  }
+  .navbar.large { flex-direction: column; align-items: stretch; gap: 2px; }
+  .nav-line { display: flex; align-items: center; justify-content: space-between; min-height: 34px; }
+  .nav-title-lg { font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+  .nav-title-sm { font-size: 16px; font-weight: 600; }
+  .nav-btn { color: #F35064; font-size: 16px; display: flex; align-items: center; }
+  .nav-mark { width: 30px; height: 30px; border-radius: 7px; }
+
+  .ios-body { flex: 1; overflow: hidden; padding: 0 16px 8px; }
+  .ios-body.grouped { background: #F2F2F7; }
+  .ios-body.plain { background: #fff; }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+
+  .card { background: #fff; border-radius: 18px; padding: 14px; }
+  .card.pad-lg { padding: 18px; }
+
+  .hero {
+    background: linear-gradient(135deg, #FA657A 0%, #ED3B4E 100%);
+    border-radius: 18px; padding: 18px; color: #fff;
+    box-shadow: 0 10px 22px -12px rgba(237, 59, 78, .6);
+  }
+  .hero-top { display: flex; justify-content: space-between; font-size: 12px; color: rgba(255,255,255,.86); }
+  .hero-read { display: flex; align-items: flex-end; justify-content: space-between; margin-top: 12px; }
+  .bp { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+  .bp .v1 { font-size: 46px; font-weight: 700; letter-spacing: -.02em; }
+  .bp .sep { font-size: 30px; font-weight: 300; color: rgba(255,255,255,.75); }
+  .bp .v2 { font-size: 46px; font-weight: 700; color: rgba(255,255,255,.86); }
+  .bp .unit { font-size: 11px; color: rgba(255,255,255,.75); }
+  .pill {
+    background: rgba(255,255,255,.22); color: #fff; border-radius: 999px;
+    padding: 4px 10px; font-size: 11px; font-weight: 600; white-space: nowrap;
+  }
+  .hero-pulse { font-size: 11px; color: rgba(255,255,255,.9); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+  .hero-advice { font-size: 11.5px; color: rgba(255,255,255,.92); margin-top: 12px; }
+  .hero-trend {
+    display: inline-flex; align-items: center; gap: 5px; margin-top: 12px;
+    background: rgba(255,255,255,.18); border-radius: 999px; padding: 4px 10px; font-size: 11px; font-weight: 500;
+  }
+
+  .actions { display: flex; gap: 12px; }
+  .btn {
+    flex: 1; border-radius: 14px; padding: 12px 8px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    font-size: 13px; font-weight: 600;
+  }
+  .btn.primary { background: linear-gradient(180deg, #FA657A, #ED3B4E); color: #fff; }
+  .btn.secondary { background: rgba(243, 80, 100, .12); color: #F35064; }
+
+  .sec-title { font-size: 16px; font-weight: 700; margin: 2px 0 -4px; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tile { background: #fff; border-radius: 14px; padding: 11px 12px; }
+  .tile-label { font-size: 10.5px; color: #8A8A8E; display: flex; align-items: center; gap: 4px; }
+  .tile-value { font-size: 21px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 3px; }
+  .tile-value .u { font-size: 10px; color: #8A8A8E; font-weight: 400; margin-left: 2px; }
+  .tile-cap { font-size: 10px; color: #A8A8AD; margin-top: 2px; }
+
+  .chart-card { background: #fff; border-radius: 14px; padding: 12px; }
+  .chart-head { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+  .chart-sub { font-size: 10.5px; color: #8A8A8E; margin-bottom: 8px; }
+  .axis { display: flex; justify-content: space-between; font-size: 9.5px; color: #A8A8AD; padding: 0 10px; margin-top: 2px; }
+
+  /* iOS 風のリスト */
+  .list { background: #fff; border-radius: 12px; overflow: hidden; }
+  .list-head { font-size: 12px; color: #6D6D72; text-transform: none; padding: 16px 4px 6px; }
+  .list-foot { font-size: 11px; color: #8A8A8E; padding: 6px 4px 0; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 11px 13px; min-height: 44px; }
+  .row + .row { border-top: .5px solid #E5E5EA; }
+  .row-title { flex: 1; font-size: 15px; }
+  .row-value { color: #8A8A8E; font-size: 15px; font-variant-numeric: tabular-nums; }
+  .row-sub { font-size: 11px; color: #8A8A8E; }
+  .row.tap .row-value { color: #8A8A8E; }
+  .link { color: #F35064; }
+
+  .seg { background: #EEEEF0; border-radius: 9px; padding: 2px; display: flex; gap: 2px; }
+  .seg span { flex: 1; text-align: center; font-size: 12.5px; padding: 5px 2px; border-radius: 7px; color: #1c1c1e; }
+  .seg span.on { background: #fff; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  .chips { display: flex; gap: 7px; overflow: hidden; }
+  .chip {
+    font-size: 12.5px; padding: 6px 12px; border-radius: 999px; background: #E9E9EB;
+    color: #1c1c1e; white-space: nowrap;
+  }
+  .chip.on { background: linear-gradient(180deg, #FA657A, #ED3B4E); color: #fff; font-weight: 600; }
+
+  .stepper { display: flex; background: #EEEEF0; border-radius: 8px; overflow: hidden; }
+  .stepper i { width: 30px; height: 26px; display: grid; place-items: center; font-style: normal; font-size: 15px; color: #1c1c1e; }
+  .stepper i + i { border-left: .5px solid #D9D9DE; }
+
+  .badge { border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .b-high { background: rgba(240,169,59,.18); color: #B87715; }
+  .b-normal { background: rgba(47,180,124,.18); color: #1F7D55; }
+  .b-elev { background: rgba(124,194,78,.2); color: #55892F; }
+  .b-g1 { background: rgba(245,118,63,.18); color: #C0521F; }
+  .b-g2 { background: rgba(243,80,100,.16); color: #C0293D; }
+
+  .search { background: #E9E9EB; border-radius: 10px; padding: 7px 10px; display: flex; align-items: center; gap: 6px; color: #8A8A8E; font-size: 14px; }
+
+  .day-head { display: flex; justify-content: space-between; font-size: 12px; color: #6D6D72; padding: 14px 4px 6px; }
+  .hist-row { display: flex; align-items: center; gap: 10px; padding: 9px 13px; }
+  .hist-row + .hist-row { border-top: .5px solid #E5E5EA; }
+  .hist-time { width: 56px; }
+  .hist-time b { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .hist-time span { display: flex; align-items: center; gap: 3px; font-size: 10px; color: #8A8A8E; }
+  .hist-val { display: flex; align-items: baseline; gap: 4px; font-variant-numeric: tabular-nums; }
+  .hist-val b { font-size: 18px; font-weight: 600; }
+  .hist-val i { font-style: normal; font-size: 18px; color: #8A8A8E; }
+  .hist-val em { font-style: normal; font-size: 11px; color: #FF8FA3; margin-left: 3px; }
+
+  .thumb { width: 46px; height: 46px; border-radius: 8px; flex: none; overflow: hidden; }
+  .thumb svg { width: 100%; height: 100%; display: block; }
+
+  .progress { height: 5px; border-radius: 3px; background: #E5E5EA; overflow: hidden; }
+  .progress span { display: block; height: 100%; width: 62%; background: linear-gradient(90deg, #FA657A, #ED3B4E); }
+
+  .savebar {
+    flex: none; padding: 10px 16px 8px; background: rgba(255,255,255,.94);
+    border-top: .5px solid #E5E5EA;
+  }
+  .savebar .btn { width: 100%; padding: 13px; font-size: 15px; }
+
+  .tabbar {
+    flex: none; height: 72px; padding: 8px 6px 0; display: flex;
+    background: rgba(255,255,255,.94); border-top: .5px solid #D5D5DA;
+  }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; color: #8A8A8E; }
+  .tab.on { color: #F35064; }
+  .home-ind { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 134px; height: 5px; border-radius: 3px; background: #000; opacity: .25; }
+
+  .ico { width: 17px; height: 17px; flex: none; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .ico.lg { width: 22px; height: 22px; }
+  .ico.sm { width: 13px; height: 13px; }
+  .ico.fill { fill: currentColor; stroke: none; }
+
+  /* ── 配色 ─────────────────────────────── */
+  .palette { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-top: 8px; }
+  .sw { border: 1px solid var(--hairline); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .sw-chip { height: 62px; }
+  .sw-body { padding: 10px 12px; }
+  .sw-name { font-size: .85rem; font-weight: 600; }
+  .sw-hex { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .72rem; color: var(--muted); }
+
+  footer { padding: 48px 0 72px; color: var(--muted); font-size: .84rem; border-top: 1px solid var(--hairline); margin-top: 48px; }
+  footer p { margin: 0 0 6px; max-width: 68ch; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .device { transition: none; }
+  }
+</style>
+
+<svg style="display:none" aria-hidden="true">
+  <symbol id="i-plus" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></symbol>
+  <symbol id="i-plus-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><polyline points="9 5 16 12 9 19"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="4 12 10 18 20 6"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="8 12 11 15 16 9"/></symbol>
+  <symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.6"/><path d="M8.5 7l1.3-2.2h4.4L15.5 7"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2"/><path d="M20 8V6a2 2 0 0 0-2-2h-2"/><path d="M4 16v2a2 2 0 0 0 2 2h2"/><path d="M20 16v2a2 2 0 0 1-2 2h-2"/><circle cx="12" cy="12" r="3.4"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M4 20h4L20 8l-4-4L4 16z"/><line x1="14" y1="6" x2="18" y2="10"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-7-4.5-7-9.2A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 7 2.8C19 15.5 12 20 12 20z"/></symbol>
+  <symbol id="i-sunrise" viewBox="0 0 24 24"><circle cx="12" cy="13" r="3.4"/><line x1="12" y1="4" x2="12" y2="6.5"/><line x1="5" y1="7" x2="6.6" y2="8.6"/><line x1="19" y1="7" x2="17.4" y2="8.6"/><line x1="3" y1="19" x2="21" y2="19"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><line x1="12" y1="3" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21"/><line x1="3" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21" y2="12"/><line x1="5.6" y1="5.6" x2="7" y2="7"/><line x1="17" y1="17" x2="18.4" y2="18.4"/><line x1="18.4" y1="5.6" x2="17" y2="7"/><line x1="7" y1="17" x2="5.6" y2="18.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.2 8.2 0 1 1 9.6 4a6.6 6.6 0 0 0 10.4 10.5z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M12 4a5 5 0 0 0-5 5v3.5L5.5 16h13L17 12.5V9a5 5 0 0 0-5-5z"/><path d="M10.3 18.5a1.8 1.8 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><polyline points="12 7 12 12 15.5 14"/></symbol>
+  <symbol id="i-house" viewBox="0 0 24 24"><path d="M4 11l8-6.5 8 6.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19z"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><line x1="8" y1="7" x2="20" y2="7"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="8" y1="17" x2="20" y2="17"/><circle cx="4.4" cy="7" r="1.1" class="dot"/><circle cx="4.4" cy="12" r="1.1"/><circle cx="4.4" cy="17" r="1.1"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><polyline points="4 17 9 11 13 14 20 6"/><line x1="4" y1="20" x2="20" y2="20"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.4 1.4M16.6 16.6L18 18M18 6l-1.4 1.4M7.4 16.6L6 18"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><line x1="16" y1="16" x2="20.5" y2="20.5"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="8.5 12.5 12 9 15.5 12.5"/><line x1="12" y1="9" x2="12" y2="16"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="8.5 11.5 12 15 15.5 11.5"/><line x1="12" y1="15" x2="12" y2="8"/></symbol>
+  <symbol id="i-pills" viewBox="0 0 24 24"><rect x="3" y="9.5" width="12" height="7" rx="3.5" transform="rotate(-38 9 13)"/><circle cx="16.5" cy="16" r="4.5"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M6 11v8a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 19v-8"/><polyline points="8.5 7 12 3.5 15.5 7"/><line x1="12" y1="3.5" x2="12" y2="14"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="3.5" width="12" height="14" rx="2.5"/><path d="M16 20.5H6a2 2 0 0 1-2-2V8"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M5.5 7h13l-1 12.5a1.6 1.6 0 0 1-1.6 1.5H8.1a1.6 1.6 0 0 1-1.6-1.5z"/><path d="M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l8.5 15h-17z"/><line x1="12" y1="10" x2="12" y2="14.5"/><circle cx="12" cy="17" r=".9" class="dot"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><line x1="12" y1="11" x2="12" y2="16.5"/><circle cx="12" cy="8" r=".9"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.8 12S6.5 6.2 12 6.2 21.2 12 21.2 12 17.5 17.8 12 17.8 2.8 12 2.8 12z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+  <symbol id="i-photo" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><polyline points="6 16 10 11.5 13 14.5 16 11 18.5 14"/><circle cx="9" cy="9" r="1.3"/></symbol>
+  <symbol id="i-checklist" viewBox="0 0 24 24"><polyline points="3.5 7 5 8.5 7.5 5.5"/><polyline points="3.5 16 5 17.5 7.5 14.5"/><line x1="11" y1="7" x2="20.5" y2="7"/><line x1="11" y1="16" x2="20.5" y2="16"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="10" y1="17" x2="14" y2="17"/></symbol>
+  <symbol id="i-down-tray" viewBox="0 0 24 24"><path d="M6 13v6a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 19v-6"/><polyline points="8.5 10 12 13.5 15.5 10"/><line x1="12" y1="3.5" x2="12" y2="13.5"/></symbol>
+</svg>
+
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <img src="data:image/png;base64,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" alt="うちの血圧記録のアプリアイコン">
+    <div class="masthead-text">
+      <p class="eyebrow">Ketsuatsu — Screen reference</p>
+      <h1>うちの血圧記録 画面イメージ</h1>
+      <p class="lede">
+        血圧計の写真から数値を読み取って記録する iOS アプリの画面構成です。
+        実装した SwiftUI のレイアウト・文言・配色をそのまま起こしています。
+      </p>
+      <p class="note">
+        <strong>これは実機のスクリーンショットではありません。</strong>
+        この作業環境には Xcode がないためビルドと実行ができず、リポジトリのコードから画面を再現した図です。
+        Xcode で開いてシミュレータを動かせば、この通りの画面が出ます。
+      </p>
+      <ul class="meta">
+        <li>iPhone 390 × 844</li>
+        <li>iOS 17+ / SwiftUI</li>
+        <li>ライト表示</li>
+        <li>7 画面</li>
+      </ul>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ══════════ 記録する ══════════ -->
+  <section class="group">
+    <div class="group-head">
+      <h2>記録する</h2>
+      <p>ホームから 2 タップで記録できます。写真を選ぶと数値の読み取りと日時の取得まで自動で行い、確認画面で直してから保存します。</p>
+    </div>
+
+    <div class="screens">
+
+      <!-- ── ホーム ── -->
+      <figure>
+        <div class="scaler"><div class="device"><div class="ios">
+          <div class="statusbar"><span>9:41</span><span class="sb-right"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"><span></span></span></span></div>
+          <div class="navbar large">
+            <div class="nav-title-lg">うちの血圧記録</div>
+          </div>
+          <div class="ios-body grouped">
+            <div class="stack">
+
+              <div class="hero">
+                <div class="hero-top"><span>最新の記録</span><span>10月25日(金) 07:32</span></div>
+                <div class="hero-read">
+                  <div>
+                    <div class="bp"><span class="v1">128</span><span class="sep">/</span><span class="v2">82</span><span class="unit">mmHg</span></div>
+                    <div class="hero-pulse"><svg class="ico sm fill"><use href="#i-heart"/></svg> 68 bpm</div>
+                  </div>
+                  <span class="pill">高値血圧</span>
+                </div>
+                <div class="hero-advice">高血圧の一歩手前です。生活習慣の見直しをおすすめします。</div>
+                <div class="hero-trend">↘ 先週比 -2.4 mmHg（上の平均）</div>
+              </div>
+
+              <div class="actions">
+                <div class="btn primary"><svg class="ico lg"><use href="#i-scan"/></svg>写真から記録</div>
+                <div class="btn secondary"><svg class="ico lg"><use href="#i-pencil"/></svg>手入力</div>
+              </div>
+
+              <div class="sec-title">直近 7 日</div>
+              <div class="tiles">
+                <div class="tile">
+                  <div class="tile-label"><svg class="ico sm"><use href="#i-chart"/></svg>平均</div>
+                  <div class="tile-value">128/82<span class="u">mmHg</span></div>
+                  <div class="tile-cap">上 / 下</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-label"><svg class="ico sm"><use href="#i-list"/></svg>測定回数</div>
+                  <div class="tile-value">18<span class="u">回</span></div>
+                  <div class="tile-cap">1 日あたり 2.6 回</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-label"><svg class="ico sm"><use href="#i-target"/></svg>目標達成率</div>
+                  <div class="tile-value" style="color:#2FB47C">72%</div>
+                  <div class="tile-cap">目標 134/84 以下</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-label"><svg class="ico sm"><use href="#i-heart"/></svg>平均脈拍</div>
+                  <div class="tile-value" style="color:#FF8FA3">68.4<span class="u">bpm</span></div>
+                </div>
+              </div>
+
+              <div class="sec-title">直近 2 週間の推移</div>
+              <div class="chart-card">
+                <svg viewBox="0 0 334 146" style="width:100%;height:126px" aria-label="直近 2 週間の血圧の推移">
+                  <line x1="12" y1="37.6" x2="322" y2="37.6" stroke="#F35064" stroke-opacity=".35" stroke-width="1" stroke-dasharray="4 4"/>
+                  <line x1="12" y1="111.4" x2="322" y2="111.4" stroke="#3F7BD8" stroke-opacity=".35" stroke-width="1" stroke-dasharray="4 4"/>
+                  <polyline fill="none" stroke="#F35064" stroke-width="2" stroke-linejoin="round" points="12.0,42.0 35.8,46.5 59.7,37.6 83.5,49.4 107.4,45.0 131.2,39.1 155.1,47.9 178.9,50.9 202.8,43.5 226.6,46.5 250.5,52.4 274.3,45.0 298.2,49.4 322.0,46.5"/>
+                  <polyline fill="none" stroke="#3F7BD8" stroke-width="2" stroke-linejoin="round" points="12.0,111.4 35.8,114.3 59.7,108.4 83.5,117.2 107.4,112.8 131.2,109.9 155.1,115.8 178.9,118.7 202.8,112.8 226.6,114.3 250.5,120.2 274.3,114.3 298.2,117.2 322.0,114.3"/>
+                  <g fill="#F35064"><circle cx="12" cy="42" r="2.6"/><circle cx="59.7" cy="37.6" r="2.6"/><circle cx="107.4" cy="45" r="2.6"/><circle cx="155.1" cy="47.9" r="2.6"/><circle cx="202.8" cy="43.5" r="2.6"/><circle cx="250.5" cy="52.4" r="2.6"/><circle cx="298.2" cy="49.4" r="2.6"/><circle cx="322" cy="46.5" r="2.6"/></g>
+                  <g fill="#3F7BD8"><circle cx="12" cy="111.4" r="2.6"/><circle cx="59.7" cy="108.4" r="2.6"/><circle cx="107.4" cy="112.8" r="2.6"/><circle cx="155.1" cy="115.8" r="2.6"/><circle cx="202.8" cy="112.8" r="2.6"/><circle cx="250.5" cy="120.2" r="2.6"/><circle cx="298.2" cy="117.2" r="2.6"/><circle cx="322" cy="114.3" r="2.6"/></g>
+                </svg>
+                <div class="axis"><span>10/12</span><span>10/15</span><span>10/18</span><span>10/21</span><span>10/24</span></div>
+              </div>
+
+              <div class="sec-title">朝と晩の平均</div>
+              <div class="tiles">
+                <div class="tile">
+                  <div class="tile-label"><svg class="ico sm"><use href="#i-sunrise"/></svg>朝</div>
+                  <div class="tile-value" style="color:#F0A93B">134/86<span class="u">mmHg</span></div>
+                </div>
+                <div class="tile">
+                  <div class="tile-label"><svg class="ico sm"><use href="#i-moon"/></svg>晩</div>
+                  <div class="tile-value" style="color:#3F7BD8">123/78<span class="u">mmHg</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab on"><svg class="ico lg fill"><use href="#i-house"/></svg>ホーム</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-list"/></svg>履歴</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-chart"/></svg>グラフ</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-gear"/></svg>設定</div>
+          </div>
+          <div class="home-ind"></div>
+        </div></div></div>
+        <figcaption>
+          <p class="cap-title">ホーム</p>
+          <ul class="cap-list">
+            <li>最新の記録はアイコンと同じグラデーションのカードで、判定と一言アドバイスを添える</li>
+            <li>先週の同じ長さの期間と比べた増減を表示</li>
+            <li>直近 7 日のまとめ、2 週間の推移、朝晩の平均</li>
+            <li>「写真から記録」を押すと 撮影する／写真から選ぶ を選択</li>
+          </ul>
+          <p class="cap-src">Ketsuatsu/Views/Home/HomeView.swift</p>
+        </figcaption>
+      </figure>
+
+      <!-- ── 写真の読み取り確認 ── -->
+      <figure>
+        <div class="scaler"><div class="device"><div class="ios">
+          <div class="statusbar"><span>9:41</span><span class="sb-right"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"><span></span></span></span></div>
+          <div class="navbar">
+            <span class="nav-btn">キャンセル</span>
+            <span class="nav-title-sm">血圧を記録</span>
+            <span class="nav-btn" style="font-weight:600">保存</span>
+          </div>
+          <div class="ios-body grouped">
+            <div class="stack" style="gap:0">
+
+              <div class="list-head">&nbsp;</div>
+              <div class="list">
+                <div class="row" style="align-items:flex-start">
+                  <svg class="ico lg" style="color:#F35064;margin-top:2px"><use href="#i-scan"/></svg>
+                  <div class="row-title">
+                    <div style="font-weight:600;font-size:14px">写真から読み取りました</div>
+                    <div class="row-sub">表示のラベルから読み取りました・脈拍もラベルから取得しました（確度 92%）</div>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="row-title" style="font-size:13px;color:#8A8A8E">読み取った文字を見る</div>
+                  <svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg>
+                </div>
+              </div>
+
+              <div class="list-head">測定値</div>
+              <div class="list">
+                <div class="row">
+                  <svg class="ico" style="color:#F35064"><use href="#i-up"/></svg>
+                  <div class="row-title">収縮期（上）</div>
+                  <b style="font-size:17px;font-variant-numeric:tabular-nums">128</b>
+                  <span class="row-sub">mmHg</span>
+                  <span class="stepper"><i>−</i><i>+</i></span>
+                </div>
+                <div class="row">
+                  <svg class="ico" style="color:#3F7BD8"><use href="#i-down"/></svg>
+                  <div class="row-title">拡張期（下）</div>
+                  <b style="font-size:17px;font-variant-numeric:tabular-nums">82</b>
+                  <span class="row-sub">mmHg</span>
+                  <span class="stepper"><i>−</i><i>+</i></span>
+                </div>
+                <div class="row">
+                  <svg class="ico fill" style="color:#FF8FA3"><use href="#i-heart"/></svg>
+                  <div class="row-title">脈拍</div>
+                  <b style="font-size:17px;font-variant-numeric:tabular-nums">68</b>
+                  <span class="row-sub">bpm</span>
+                  <span class="stepper"><i>−</i><i>+</i></span>
+                </div>
+                <div class="row">
+                  <div class="row-title">判定</div>
+                  <span class="badge b-high">高値血圧</span>
+                </div>
+              </div>
+              <div class="list-foot">家庭血圧の基準で判定しています。</div>
+
+              <div class="list-head">測定した日時</div>
+              <div class="list">
+                <div class="row">
+                  <div class="row-title">日時</div>
+                  <span class="row-value" style="background:#EEEEF0;border-radius:7px;padding:4px 9px;color:#1c1c1e;font-size:14px">2024/10/25</span>
+                  <span class="row-value" style="background:#EEEEF0;border-radius:7px;padding:4px 9px;color:#1c1c1e;font-size:14px">7:32</span>
+                </div>
+                <div class="row">
+                  <div class="seg" style="width:100%">
+                    <span class="on">朝</span><span>昼</span><span>晩</span><span>その他</span>
+                  </div>
+                </div>
+              </div>
+              <div class="list-foot" style="color:#F35064;display:flex;align-items:center;gap:5px">
+                <svg class="ico sm"><use href="#i-camera"/></svg> 写真の撮影日時を使っています。
+              </div>
+
+              <div class="list-head">詳細</div>
+              <div class="list">
+                <div class="row"><div class="row-title">測定した腕</div><span class="row-value">左腕</span><svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg></div>
+                <div class="row">
+                  <svg class="ico" style="color:#B2214A"><use href="#i-pills"/></svg>
+                  <div class="row-title">薬を飲んだ</div>
+                  <span style="width:44px;height:26px;border-radius:999px;background:#E9E9EB;display:block;position:relative"><span style="position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="home-ind"></div>
+        </div></div></div>
+        <figcaption>
+          <p class="cap-title">写真の読み取り結果を確認</p>
+          <ul class="cap-list">
+            <li>読み取りの根拠（ラベル／並び順）と確度を明示。確度が低いときは「値が正しいか確認してください」を追加表示</li>
+            <li>認識した生テキストも開いて確認できる</li>
+            <li>Exif の撮影日時を測定日時に採用。手で直すと表示が消える</li>
+            <li>テンキーの上に「完了」と項目移動（∧ ∨）のバーを表示</li>
+          </ul>
+          <p class="cap-src">Ketsuatsu/Views/Record/RecordEditView.swift</p>
+        </figcaption>
+      </figure>
+
+      <!-- ── まとめて記録 ── -->
+      <figure>
+        <div class="scaler"><div class="device"><div class="ios">
+          <div class="statusbar"><span>9:41</span><span class="sb-right"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"><span></span></span></span></div>
+          <div class="navbar">
+            <span class="nav-btn">キャンセル</span>
+            <span class="nav-title-sm">まとめて記録</span>
+            <span class="nav-btn"><svg class="ico lg"><use href="#i-checklist"/></svg></span>
+          </div>
+          <div class="ios-body grouped">
+            <div class="stack" style="gap:0">
+              <div class="list-head">&nbsp;</div>
+              <div class="list">
+                <div class="row" style="display:block">
+                  <div class="progress"><span></span></div>
+                  <div class="row-sub" style="margin-top:7px">5 / 8 枚を読み取り中…</div>
+                </div>
+              </div>
+
+              <div class="list-head">読み取った内容</div>
+              <div class="list">
+                <div class="row">
+                  <svg class="ico lg fill" style="color:#F35064"><use href="#i-check-circle"/></svg>
+                  <span class="thumb"><svg viewBox="0 0 46 46"><rect width="46" height="46" fill="#DFE3EA"/><rect x="7" y="11" width="32" height="24" rx="3" fill="#2C3138"/><text x="23" y="24" font-size="11" fill="#8CF3C6" text-anchor="middle" font-family="monospace">128</text><text x="23" y="32" font-size="8" fill="#8CF3C6" text-anchor="middle" font-family="monospace">82</text></svg></span>
+                  <div style="flex:1">
+                    <div class="hist-val"><b>132</b><i>/</i><i>84</i><em>脈 71</em></div>
+                    <div class="row-sub" style="display:flex;align-items:center;gap:4px">10月23日(水) 07:15 <svg class="ico sm" style="color:#F35064"><use href="#i-camera"/></svg></div>
+                  </div>
+                  <svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg>
+                </div>
+                <div class="row">
+                  <svg class="ico lg fill" style="color:#F35064"><use href="#i-check-circle"/></svg>
+                  <span class="thumb"><svg viewBox="0 0 46 46"><rect width="46" height="46" fill="#D8DEE6"/><rect x="7" y="11" width="32" height="24" rx="3" fill="#2C3138"/><text x="23" y="24" font-size="11" fill="#8CF3C6" text-anchor="middle" font-family="monospace">126</text><text x="23" y="32" font-size="8" fill="#8CF3C6" text-anchor="middle" font-family="monospace">79</text></svg></span>
+                  <div style="flex:1">
+                    <div class="hist-val"><b>126</b><i>/</i><i>79</i><em>脈 66</em></div>
+                    <div class="row-sub" style="display:flex;align-items:center;gap:4px">10月23日(水) 21:40 <svg class="ico sm" style="color:#F35064"><use href="#i-camera"/></svg></div>
+                  </div>
+                  <svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg>
+                </div>
+                <div class="row">
+                  <svg class="ico lg fill" style="color:#F35064"><use href="#i-check-circle"/></svg>
+                  <span class="thumb"><svg viewBox="0 0 46 46"><rect width="46" height="46" fill="#E4E0DA"/><rect x="7" y="11" width="32" height="24" rx="3" fill="#2C3138"/><text x="23" y="24" font-size="11" fill="#8CF3C6" text-anchor="middle" font-family="monospace">141</text><text x="23" y="32" font-size="8" fill="#8CF3C6" text-anchor="middle" font-family="monospace">90</text></svg></span>
+                  <div style="flex:1">
+                    <div class="hist-val"><b>141</b><i>/</i><i>90</i></div>
+                    <div class="row-sub" style="display:flex;align-items:center;gap:5px">10月24日(木) 07:05 <svg class="ico sm" style="color:#F35064"><use href="#i-camera"/></svg> <span style="color:#F0A93B">要確認</span></div>
+                  </div>
+                  <svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg>
+                </div>
+                <div class="row">
+                  <svg class="ico lg" style="color:#C7C7CC"><use href="#i-circle"/></svg>
+                  <span class="thumb"><svg viewBox="0 0 46 46"><rect width="46" height="46" fill="#CFCFD4"/><rect x="7" y="11" width="32" height="24" rx="3" fill="#3A3F45"/><text x="23" y="27" font-size="9" fill="#6F7780" text-anchor="middle" font-family="monospace">— —</text></svg></span>
+                  <div style="flex:1">
+                    <div style="display:flex;align-items:center;gap:5px;color:#F0A93B;font-size:14px;font-weight:600">
+                      <svg class="ico sm"><use href="#i-warn"/></svg> 読み取れませんでした
+                    </div>
+                    <div class="row-sub">10月24日(木) 21:22</div>
+                  </div>
+                  <svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg>
+                </div>
+                <div class="row">
+                  <svg class="ico lg fill" style="color:#F35064"><use href="#i-check-circle"/></svg>
+                  <span class="thumb"><svg viewBox="0 0 46 46"><rect width="46" height="46" fill="#DDE2E8"/><rect x="7" y="11" width="32" height="24" rx="3" fill="#2C3138"/><text x="23" y="24" font-size="11" fill="#8CF3C6" text-anchor="middle" font-family="monospace">129</text><text x="23" y="32" font-size="8" fill="#8CF3C6" text-anchor="middle" font-family="monospace">81</text></svg></span>
+                  <div style="flex:1">
+                    <div class="hist-val"><b>129</b><i>/</i><i>81</i><em>脈 70</em></div>
+                    <div class="row-sub" style="display:flex;align-items:center;gap:4px">10月25日(金) 07:32 <svg class="ico sm" style="color:#F35064"><use href="#i-camera"/></svg></div>
+                  </div>
+                  <svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg>
+                </div>
+              </div>
+              <div class="list-foot">値をタップすると修正できます。チェックの付いたものだけが記録されます。</div>
+            </div>
+          </div>
+          <div class="savebar"><div class="btn primary">6 件を記録する</div></div>
+          <div class="home-ind"></div>
+        </div></div></div>
+        <figcaption>
+          <p class="cap-title">まとめて記録</p>
+          <ul class="cap-list">
+            <li>写真を複数選ぶとこの画面へ。1 枚ずつ順に読み取り、終わったものから一覧に出る</li>
+            <li>読み取れなかった写真はチェックが外れ、手入力すれば対象に戻る</li>
+            <li>撮影日時アイコンと「要確認」で、あとから直すべき行が分かる</li>
+          </ul>
+          <p class="cap-src">Ketsuatsu/Views/Capture/BatchImportView.swift</p>
+        </figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ══════════ ふりかえる ══════════ -->
+  <section class="group">
+    <div class="group-head">
+      <h2>ふりかえる</h2>
+      <p>履歴は日付ごと、グラフは期間と時間帯を選んで見ます。家庭血圧は朝と晩それぞれの平均で判断するため、時間帯で切り替えられることを重視しています。</p>
+    </div>
+
+    <div class="screens">
+
+      <!-- ── 履歴 ── -->
+      <figure>
+        <div class="scaler"><div class="device"><div class="ios">
+          <div class="statusbar"><span>9:41</span><span class="sb-right"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"><span></span></span></span></div>
+          <div class="navbar large">
+            <div class="nav-line">
+              <span class="nav-btn"><svg class="ico lg"><use href="#i-filter"/></svg></span>
+              <span class="nav-btn"><svg class="ico lg"><use href="#i-plus"/></svg></span>
+            </div>
+            <div class="nav-title-lg">履歴</div>
+            <div class="search" style="margin-top:8px"><svg class="ico sm"><use href="#i-search"/></svg>メモや数値で検索</div>
+          </div>
+          <div class="ios-body grouped">
+            <div class="day-head"><span>今日</span><span>平均 128/82</span></div>
+            <div class="list">
+              <div class="hist-row">
+                <div class="hist-time"><b>07:32</b><span><svg class="ico sm"><use href="#i-sunrise"/></svg>朝</span></div>
+                <div style="flex:1"><div class="hist-val"><b>128</b><i>/</i><i>82</i><em>脈 68</em></div></div>
+                <span class="badge b-high">高値</span>
+              </div>
+              <div class="hist-row">
+                <div class="hist-time"><b>13:10</b><span><svg class="ico sm"><use href="#i-sun"/></svg>昼</span></div>
+                <div style="flex:1">
+                  <div class="hist-val"><b>124</b><i>/</i><i>79</i><em>脈 72</em></div>
+                  <div class="row-sub">昼食後・少し早歩きのあと</div>
+                </div>
+                <span class="badge b-elev">正常高値</span>
+              </div>
+            </div>
+
+            <div class="day-head"><span>昨日</span><span>平均 133/85</span></div>
+            <div class="list">
+              <div class="hist-row">
+                <div class="hist-time"><b>07:05</b><span><svg class="ico sm"><use href="#i-sunrise"/></svg>朝</span></div>
+                <div style="flex:1"><div class="hist-val"><b>141</b><i>/</i><i>90</i><em>脈 74</em></div></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                  <span class="badge b-g2">II 度</span>
+                  <svg class="ico sm" style="color:#B2214A"><use href="#i-pills"/></svg>
+                </div>
+              </div>
+              <div class="hist-row">
+                <div class="hist-time"><b>21:40</b><span><svg class="ico sm"><use href="#i-moon"/></svg>晩</span></div>
+                <div style="flex:1"><div class="hist-val"><b>126</b><i>/</i><i>79</i><em>脈 66</em></div></div>
+                <span class="badge b-elev">正常高値</span>
+              </div>
+            </div>
+
+            <div class="day-head"><span>2024年10月23日(水)</span><span>平均 129/81</span></div>
+            <div class="list">
+              <div class="hist-row">
+                <div class="hist-time"><b>07:15</b><span><svg class="ico sm"><use href="#i-sunrise"/></svg>朝</span></div>
+                <div style="flex:1"><div class="hist-val"><b>132</b><i>/</i><i>84</i><em>脈 71</em></div></div>
+                <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                  <span class="badge b-high">高値</span>
+                  <svg class="ico sm" style="color:#8A8A8E"><use href="#i-camera"/></svg>
+                </div>
+              </div>
+              <div class="hist-row">
+                <div class="hist-time"><b>21:40</b><span><svg class="ico sm"><use href="#i-moon"/></svg>晩</span></div>
+                <div style="flex:1"><div class="hist-val"><b>126</b><i>/</i><i>79</i><em>脈 66</em></div></div>
+                <span class="badge b-elev">正常高値</span>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><svg class="ico lg"><use href="#i-house"/></svg>ホーム</div>
+            <div class="tab on"><svg class="ico lg"><use href="#i-list"/></svg>履歴</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-chart"/></svg>グラフ</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-gear"/></svg>設定</div>
+          </div>
+          <div class="home-ind"></div>
+        </div></div></div>
+        <figcaption>
+          <p class="cap-title">履歴</p>
+          <ul class="cap-list">
+            <li>日付ごとにまとめ、見出しにその日の平均を表示</li>
+            <li>時間帯・服薬・写真から読み取ったことがひと目で分かる</li>
+            <li>左上のメニューから期間・時間帯の絞り込みと CSV 書き出し</li>
+          </ul>
+          <p class="cap-src">Ketsuatsu/Views/History/HistoryView.swift</p>
+        </figcaption>
+      </figure>
+
+      <!-- ── グラフ ── -->
+      <figure>
+        <div class="scaler"><div class="device"><div class="ios">
+          <div class="statusbar"><span>9:41</span><span class="sb-right"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"><span></span></span></span></div>
+          <div class="navbar large"><div class="nav-title-lg">グラフ</div></div>
+          <div class="ios-body grouped">
+            <div class="stack">
+              <div>
+                <div class="chips">
+                  <span class="chip">1週間</span><span class="chip">1か月</span><span class="chip">3か月</span><span class="chip">半年</span><span class="chip on">期間指定</span>
+                </div>
+                <div class="card" style="margin-top:10px;padding:10px 13px">
+                  <div class="row" style="padding:5px 0;min-height:34px">
+                    <div class="row-title" style="font-size:14px">開始日</div>
+                    <span class="row-value" style="background:#EEEEF0;border-radius:7px;padding:4px 9px;color:#1c1c1e;font-size:14px">2024/10/01</span>
+                  </div>
+                  <div class="row" style="padding:5px 0;min-height:34px;border-top:.5px solid #E5E5EA">
+                    <div class="row-title" style="font-size:14px">終了日</div>
+                    <span class="row-value" style="background:#EEEEF0;border-radius:7px;padding:4px 9px;color:#1c1c1e;font-size:14px">2024/10/25</span>
+                  </div>
+                </div>
+                <div class="row-sub" style="margin-top:8px">10/1 〜 10/25・25 件</div>
+              </div>
+
+              <div>
+                <div class="seg"><span>平均</span><span class="on">朝</span><span>昼</span><span>晩</span><span>すべて</span></div>
+                <div class="row-sub" style="margin-top:6px">「朝」に記録した測定値です。</div>
+              </div>
+
+              <div class="chart-card">
+                <div class="chart-head">血圧の推移</div>
+                <div class="chart-sub">点線は目標値（134/84）</div>
+                <svg viewBox="0 0 334 176" style="width:100%;height:156px" aria-label="朝の血圧の推移">
+                  <line x1="14" y1="42" x2="320" y2="42" stroke="#F35064" stroke-opacity=".4" stroke-width="1" stroke-dasharray="5 4"/>
+                  <line x1="14" y1="135.8" x2="320" y2="135.8" stroke="#3F7BD8" stroke-opacity=".4" stroke-width="1" stroke-dasharray="5 4"/>
+                  <polyline fill="none" stroke="#F35064" stroke-width="2" stroke-linejoin="round" points="14.0,34.5 26.8,28.9 39.5,38.2 52.2,32.6 65.0,25.1 77.8,36.4 90.5,40.1 103.2,30.8 116.0,34.5 128.8,27.0 141.5,38.2 154.2,42.0 167.0,32.6 179.8,36.4 192.5,28.9 205.2,40.1 218.0,34.5 230.8,38.2 243.5,30.8 256.2,42.0 269.0,36.4 281.8,43.9 294.5,38.2 307.2,42.0 320.0,45.8"/>
+                  <polyline fill="none" stroke="#3F7BD8" stroke-width="2" stroke-linejoin="round" points="14.0,128.2 26.8,124.5 39.5,132.0 52.2,126.4 65.0,122.6 77.8,130.1 90.5,133.9 103.2,128.2 116.0,130.1 128.8,124.5 141.5,132.0 154.2,135.8 167.0,128.2 179.8,132.0 192.5,126.4 205.2,133.9 218.0,130.1 230.8,132.0 243.5,128.2 256.2,135.8 269.0,132.0 281.8,137.6 294.5,133.9 307.2,135.8 320.0,137.6"/>
+                  <g fill="#F35064"><circle cx="14" cy="34.5" r="2.5"/><circle cx="65" cy="25.1" r="2.5"/><circle cx="116" cy="34.5" r="2.5"/><circle cx="167" cy="32.6" r="2.5"/><circle cx="218" cy="34.5" r="2.5"/><circle cx="269" cy="36.4" r="2.5"/><circle cx="320" cy="45.8" r="2.5"/></g>
+                  <g fill="#3F7BD8"><circle cx="14" cy="128.2" r="2.5"/><circle cx="65" cy="122.6" r="2.5"/><circle cx="116" cy="130.1" r="2.5"/><circle cx="167" cy="128.2" r="2.5"/><circle cx="218" cy="130.1" r="2.5"/><circle cx="269" cy="132" r="2.5"/><circle cx="320" cy="137.6" r="2.5"/></g>
+                </svg>
+                <div class="axis"><span>10/1</span><span>10/6</span><span>10/11</span><span>10/16</span><span>10/21</span><span>10/25</span></div>
+              </div>
+
+              <div class="sec-title">「朝」のまとめ</div>
+              <div class="tiles">
+                <div class="tile">
+                  <div class="tile-label"><svg class="ico sm"><use href="#i-up"/></svg>平均（上）</div>
+                  <div class="tile-value" style="color:#F35064">137.1<span class="u">mmHg</span></div>
+                  <div class="tile-cap">最低 132 / 最高 143</div>
+                </div>
+                <div class="tile">
+                  <div class="tile-label"><svg class="ico sm"><use href="#i-down"/></svg>平均（下）</div>
+                  <div class="tile-value" style="color:#3F7BD8">86.7<span class="u">mmHg</span></div>
+                  <div class="tile-cap">最低 83 / 最高 91</div>
+                </div>
+              </div>
+
+              <div class="chart-card">
+                <div class="chart-head">時間帯ごとの平均</div>
+                <div class="chart-sub">この期間のすべての記録から計算しています</div>
+                <div class="row" style="padding:6px 0">
+                  <span style="width:64px;display:flex;align-items:center;gap:5px;font-size:14px;font-weight:500"><svg class="ico sm"><use href="#i-sunrise"/></svg>朝</span>
+                  <b style="font-size:17px;color:#F35064;font-variant-numeric:tabular-nums">137 / 87</b>
+                  <span class="row-sub">mmHg</span><span style="flex:1"></span>
+                  <span class="badge b-g1">I 度</span>
+                </div>
+                <div class="row" style="padding:6px 0;border-top:.5px solid #E5E5EA">
+                  <span style="width:64px;display:flex;align-items:center;gap:5px;font-size:14px;font-weight:500"><svg class="ico sm"><use href="#i-sun"/></svg>昼</span>
+                  <b style="font-size:17px;color:#F35064;font-variant-numeric:tabular-nums">126 / 80</b>
+                  <span class="row-sub">mmHg</span><span style="flex:1"></span>
+                  <span class="badge b-high">高値</span>
+                </div>
+                <div class="row" style="padding:6px 0;border-top:.5px solid #E5E5EA">
+                  <span style="width:64px;display:flex;align-items:center;gap:5px;font-size:14px;font-weight:500"><svg class="ico sm"><use href="#i-moon"/></svg>晩</span>
+                  <b style="font-size:17px;color:#F35064;font-variant-numeric:tabular-nums">123 / 78</b>
+                  <span class="row-sub">mmHg</span><span style="flex:1"></span>
+                  <span class="badge b-elev">正常高値</span>
+                </div>
+                <div class="row" style="padding:8px 0 2px;border-top:.5px solid #E5E5EA">
+                  <span class="row-sub" style="flex:1">朝晩の差（上）</span>
+                  <b style="font-size:12px;color:#F0A93B">+14.2 mmHg</b>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><svg class="ico lg"><use href="#i-house"/></svg>ホーム</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-list"/></svg>履歴</div>
+            <div class="tab on"><svg class="ico lg"><use href="#i-chart"/></svg>グラフ</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-gear"/></svg>設定</div>
+          </div>
+          <div class="home-ind"></div>
+        </div></div></div>
+        <figcaption>
+          <p class="cap-title">グラフ（期間指定 × 朝）</p>
+          <ul class="cap-list">
+            <li>期間は 1週間 / 1か月 / 3か月 / 半年 / 1年 / 全期間 / 期間指定</li>
+            <li>系列は 平均 / 朝 / 昼 / 晩 / すべて。集計も選んだ系列で計算する</li>
+            <li>期間が長いと平均の単位を 日 → 週 → 月 に自動で切り替える</li>
+          </ul>
+          <p class="cap-src">Ketsuatsu/Views/Charts/ChartsView.swift</p>
+        </figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ══════════ 整える ══════════ -->
+  <section class="group">
+    <div class="group-head">
+      <h2>整える</h2>
+      <p>測り忘れを防ぐリマインダーと、判定基準・目標値・ヘルスケア連携の設定です。</p>
+    </div>
+
+    <div class="screens">
+
+      <!-- ── リマインダー ── -->
+      <figure>
+        <div class="scaler"><div class="device"><div class="ios">
+          <div class="statusbar"><span>9:41</span><span class="sb-right"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"><span></span></span></span></div>
+          <div class="navbar">
+            <span class="nav-btn"><svg class="ico lg" style="transform:scaleX(-1)"><use href="#i-chevron"/></svg>設定</span>
+            <span class="nav-title-sm">リマインダー</span>
+            <span style="width:44px"></span>
+          </div>
+          <div class="ios-body grouped">
+            <div class="stack" style="gap:0">
+              <div class="list-head">&nbsp;</div>
+              <div class="list">
+                <div class="row">
+                  <svg class="ico" style="color:#F35064"><use href="#i-bell"/></svg>
+                  <div class="row-title">測定リマインダー</div>
+                  <span style="width:44px;height:26px;border-radius:999px;background:#F35064;display:block;position:relative"><span style="position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span></span>
+                </div>
+              </div>
+              <div class="list-foot">週 15 回の通知を登録します。</div>
+
+              <div class="list-head">設定方法</div>
+              <div class="list">
+                <div class="row"><div class="seg" style="width:100%"><span>まとめて</span><span class="on">曜日ごと</span></div></div>
+              </div>
+              <div class="list-foot">曜日ごとに通知する時刻を変えられます。</div>
+
+              <div class="list">
+                <div class="row" style="padding-bottom:4px">
+                  <div class="seg" style="width:100%">
+                    <span>日</span><span>月</span><span>火</span><span class="on">水</span><span>木</span><span>金</span><span>土</span>
+                  </div>
+                </div>
+                <div class="row" style="padding-top:2px;border:0">
+                  <div style="display:flex;width:100%;font-size:10.5px;color:#8A8A8E;text-align:center">
+                    <span style="flex:1">3回</span><span style="flex:1">1回</span><span style="flex:1">1回</span>
+                    <span style="flex:1;color:#F35064;font-weight:600">3回</span>
+                    <span style="flex:1">1回</span><span style="flex:1">1回</span><span style="flex:1">3回</span>
+                  </div>
+                </div>
+              </div>
+              <div class="list-foot">曜日を選ぶと、その曜日の時刻を編集できます。</div>
+
+              <div class="list-head">水曜日の時刻</div>
+              <div class="list">
+                <div class="row">
+                  <svg class="ico" style="color:#F35064"><use href="#i-sunrise"/></svg>
+                  <div><b style="font-size:19px;font-weight:500;font-variant-numeric:tabular-nums">07:00</b><div class="row-sub">朝</div></div>
+                  <span style="flex:1"></span>
+                  <span style="width:44px;height:26px;border-radius:999px;background:#F35064;display:block;position:relative"><span style="position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span></span>
+                </div>
+                <div class="row">
+                  <svg class="ico" style="color:#F35064"><use href="#i-sun"/></svg>
+                  <div><b style="font-size:19px;font-weight:500;font-variant-numeric:tabular-nums">13:00</b><div class="row-sub">昼</div></div>
+                  <span style="flex:1"></span>
+                  <span style="width:44px;height:26px;border-radius:999px;background:#F35064;display:block;position:relative"><span style="position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span></span>
+                </div>
+                <div class="row">
+                  <svg class="ico" style="color:#F35064"><use href="#i-moon"/></svg>
+                  <div><b style="font-size:19px;font-weight:500;font-variant-numeric:tabular-nums">21:00</b><div class="row-sub">晩</div></div>
+                  <span style="flex:1"></span>
+                  <span style="width:44px;height:26px;border-radius:999px;background:#F35064;display:block;position:relative"><span style="position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span></span>
+                </div>
+                <div class="row link"><svg class="ico"><use href="#i-plus-circle"/></svg><div class="row-title">時刻を追加</div></div>
+                <div class="row link"><svg class="ico"><use href="#i-copy"/></svg><div class="row-title">この曜日の時刻を他の曜日にも反映</div></div>
+              </div>
+
+              <div class="list-head">かんたん設定</div>
+              <div class="list">
+                <div class="row">
+                  <div class="row-title">1 日 2 回（朝・晩）<div class="row-sub" style="font-variant-numeric:tabular-nums">07:00 / 21:00</div></div>
+                  <svg class="ico" style="color:#F35064"><use href="#i-chevron"/></svg>
+                </div>
+                <div class="row">
+                  <div class="row-title">1 日 3 回（朝・昼・晩）<div class="row-sub" style="font-variant-numeric:tabular-nums">07:00 / 13:00 / 21:00</div></div>
+                  <svg class="ico" style="color:#F35064"><use href="#i-chevron"/></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="home-ind"></div>
+        </div></div></div>
+        <figcaption>
+          <p class="cap-title">リマインダー（曜日ごと）</p>
+          <ul class="cap-list">
+            <li>「まとめて」なら全曜日同じ時刻、「曜日ごと」なら曜日別に時刻を設定</li>
+            <li>曜日の下に設定回数が並ぶので、手つかずの曜日が分かる</li>
+            <li>その曜日の時刻を すべての曜日 / 平日 / 土日 にコピーできる</li>
+          </ul>
+          <p class="cap-src">Ketsuatsu/Views/Settings/ReminderScheduleView.swift</p>
+        </figcaption>
+      </figure>
+
+      <!-- ── 設定 ── -->
+      <figure>
+        <div class="scaler"><div class="device"><div class="ios">
+          <div class="statusbar"><span>9:41</span><span class="sb-right"><span class="bars"><i></i><i></i><i></i><i></i></span><span class="batt"><span></span></span></span></div>
+          <div class="navbar large"><div class="nav-title-lg">設定</div></div>
+          <div class="ios-body grouped">
+            <div class="stack" style="gap:0">
+              <div class="list-head">判定</div>
+              <div class="list">
+                <div class="row"><div class="row-title">判定の基準</div><span class="row-value">家庭血圧</span><svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg></div>
+              </div>
+              <div class="list-foot">自宅で測る血圧の基準（高血圧は 135/85mmHg 以上）</div>
+
+              <div class="list-head">目標値</div>
+              <div class="list">
+                <div class="row"><div class="row-title">収縮期（上）の目標</div><span class="row-value">134 mmHg</span><span class="stepper"><i>−</i><i>+</i></span></div>
+                <div class="row"><div class="row-title">拡張期（下）の目標</div><span class="row-value">84 mmHg</span><span class="stepper"><i>−</i><i>+</i></span></div>
+                <div class="row link"><div class="row-title">推奨値に戻す</div></div>
+              </div>
+              <div class="list-foot">この値以下の記録を「目標達成」として集計します。</div>
+
+              <div class="list-head">リマインダー</div>
+              <div class="list">
+                <div class="row"><div class="row-title">測定のお知らせ</div><span class="row-value">曜日ごと・週 15 回</span><svg class="ico sm" style="color:#C7C7CC"><use href="#i-chevron"/></svg></div>
+              </div>
+              <div class="list-foot">1 日に何回でも設定できます。曜日ごとに時刻を変えることもできます。</div>
+
+              <div class="list-head">ヘルスケア連携</div>
+              <div class="list">
+                <div class="row">
+                  <div class="row-title">記録をヘルスケアへ書き出す</div>
+                  <span style="width:44px;height:26px;border-radius:999px;background:#F35064;display:block;position:relative"><span style="position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:999px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span></span>
+                </div>
+                <div class="row link"><svg class="ico"><use href="#i-down-tray"/></svg><div class="row-title">ヘルスケアから取り込む</div></div>
+                <div class="row link"><svg class="ico"><use href="#i-share"/></svg><div class="row-title">未同期の記録を書き出す</div></div>
+              </div>
+
+              <div class="list-head">データ</div>
+              <div class="list">
+                <div class="row"><div class="row-title">記録件数</div><span class="row-value">248 件</span></div>
+                <div class="row link"><svg class="ico"><use href="#i-share"/></svg><div class="row-title">CSV で書き出す</div></div>
+                <div class="row" style="color:#FF3B30"><svg class="ico"><use href="#i-trash"/></svg><div class="row-title">すべての記録を削除</div></div>
+              </div>
+
+              <div class="list-head">このアプリについて</div>
+              <div class="list">
+                <div class="row">
+                  <img src="data:image/png;base64,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" alt="" style="width:52px;height:52px;border-radius:12px">
+                  <div class="row-title"><div style="font-weight:600;font-size:16px">うちの血圧記録</div><div class="row-sub">バージョン 1.0 (1)</div></div>
+                </div>
+              </div>
+              <div class="list-foot">このアプリは医療機器ではありません。記録と傾向の把握を助けるものであり、診断・治療の判断は医師にご相談ください。</div>
+            </div>
+          </div>
+          <div class="tabbar">
+            <div class="tab"><svg class="ico lg"><use href="#i-house"/></svg>ホーム</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-list"/></svg>履歴</div>
+            <div class="tab"><svg class="ico lg"><use href="#i-chart"/></svg>グラフ</div>
+            <div class="tab on"><svg class="ico lg"><use href="#i-gear"/></svg>設定</div>
+          </div>
+          <div class="home-ind"></div>
+        </div></div></div>
+        <figcaption>
+          <p class="cap-title">設定</p>
+          <ul class="cap-list">
+            <li>判定基準を家庭血圧／診察室血圧で切り替えると、目標値も推奨値に追従</li>
+            <li>ヘルスケアは書き出し・取り込み・未同期分の一括送信</li>
+            <li>CSV は Excel でも文字化けしない形式で書き出す</li>
+          </ul>
+          <p class="cap-src">Ketsuatsu/Views/Settings/SettingsView.swift</p>
+        </figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ══════════ 配色 ══════════ -->
+  <section class="group">
+    <div class="group-head">
+      <h2>配色</h2>
+      <p>アプリアイコンのグラデーションから採色し、<code>Theme.swift</code> にまとめています。判定区分は 緑 → 琥珀 → コーラル → ベリー と段階的に濃くなり、II 度高血圧がちょうどブランドカラーに重なります。</p>
+    </div>
+    <div class="palette">
+      <div class="sw"><div class="sw-chip" style="background:#FA657A"></div><div class="sw-body"><div class="sw-name">ブランド（上）</div><div class="sw-hex">#FA657A</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#F35064"></div><div class="sw-body"><div class="sw-name">ブランド / アクセント</div><div class="sw-hex">#F35064</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#ED3B4E"></div><div class="sw-body"><div class="sw-name">ブランド（下）</div><div class="sw-hex">#ED3B4E</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#3F7BD8"></div><div class="sw-body"><div class="sw-name">拡張期（下）</div><div class="sw-hex">#3F7BD8</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:#FF8FA3"></div><div class="sw-body"><div class="sw-name">脈拍</div><div class="sw-hex">#FF8FA3</div></div></div>
+      <div class="sw"><div class="sw-chip" style="background:linear-gradient(90deg,#2FB47C,#7CC24E,#F0A93B,#F5763F,#F35064,#B2214A)"></div><div class="sw-body"><div class="sw-name">判定区分</div><div class="sw-hex">正常 → III 度</div></div></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>うちの血圧記録（Ketsuatsu）— SwiftUI + SwiftData + Swift Charts / iOS 17 以降。</p>
+  <p>画面はリポジトリの実装から再現した図で、実機のスクリーンショットではありません。数値はすべて説明用のサンプルです。</p>
+</footer>
