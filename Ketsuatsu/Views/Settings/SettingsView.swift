@@ -91,7 +91,7 @@ struct SettingsView: View {
                     HStack(spacing: 14) {
                         AppMarkView(size: 52)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("血圧ノート")
+                            Text("うちの血圧記録")
                                 .font(.headline)
                             Text("バージョン \(appVersion)")
                                 .font(.caption)

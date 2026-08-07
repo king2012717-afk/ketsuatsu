@@ -1,4 +1,4 @@
-# 血圧ノート（Ketsuatsu）
+# うちの血圧記録（Ketsuatsu）
 
 <img src="Ketsuatsu/Assets.xcassets/AppMark.imageset/AppMark.png" width="120" alt="アプリアイコン">
 

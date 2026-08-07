@@ -43,7 +43,7 @@ struct HomeView: View {
                 .padding(.bottom, 24)
             }
             .background(Theme.pageBackground)
-            .navigationTitle("血圧ノート")
+            .navigationTitle("うちの血圧記録")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     AppMarkView(size: 30)
