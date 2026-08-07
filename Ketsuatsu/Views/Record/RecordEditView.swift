@@ -19,6 +19,7 @@ struct RecordEditView: View {
 
     @State private var draft: BPDraft
     @State private var showsDeleteConfirmation = false
+    @FocusState private var focus: RecordFormSections.Field?
     @State private var showsRecognizedText = false
     @State private var isSaving = false
 
@@ -40,7 +41,7 @@ struct RecordEditView: View {
                 if let ocrResult {
                     ocrSection(ocrResult)
                 }
-                RecordFormSections(draft: $draft, standard: settings.standard)
+                RecordFormSections(draft: $draft, standard: settings.standard, focus: $focus)
                 if let photoData = draft.photoData, let image = UIImage(data: photoData) {
                     photoSection(image)
                 }
@@ -48,6 +49,7 @@ struct RecordEditView: View {
                     deleteSection
                 }
             }
+            .numberPadToolbar(focus: $focus)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle(isEditing ? "記録を編集" : "血圧を記録")
             .navigationBarTitleDisplayMode(.inline)

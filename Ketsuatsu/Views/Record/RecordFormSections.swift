@@ -3,62 +3,26 @@ import SwiftUI
 /// 測定値・日時・詳細の入力欄。
 /// 1 件ずつの記録画面と、まとめて記録するときの編集画面で共通に使う。
 struct RecordFormSections: View {
-    @Binding var draft: BPDraft
-    var standard: BPStandard
-
     /// 数値入力欄の並び。キーボードの上下ボタンでこの順に移動する。
-    private enum Field: Int, Hashable, CaseIterable {
+    enum Field: Int, Hashable, CaseIterable {
         case systolic
         case diastolic
         case pulse
     }
 
+    @Binding var draft: BPDraft
+    var standard: BPStandard
+    /// キーボードのバーは呼び出し側のフォームに 1 つだけ付けるため、フォーカスも呼び出し側が持つ。
+    @FocusState.Binding var focus: Field?
+
     @State private var slotEditedManually = false
-    @FocusState private var focus: Field?
 
     var body: some View {
         Group {
-            // キーボードのバーは入力欄のあるセクションにだけ付ける。
-            // Group に付けると中のセクションごとに適用され、バーが重複して出てしまう。
             valuesSection
-                .toolbar { keyboardToolbar }
             timingSection
             detailSection
         }
-    }
-
-    /// テンキーには改行キーがないので、閉じる手段をキーボードの上に置く。
-    @ToolbarContentBuilder
-    private var keyboardToolbar: some ToolbarContent {
-        ToolbarItemGroup(placement: .keyboard) {
-            Button {
-                move(by: -1)
-            } label: {
-                Image(systemName: "chevron.up")
-            }
-            .disabled(focus == nil || focus == .systolic)
-
-            Button {
-                move(by: 1)
-            } label: {
-                Image(systemName: "chevron.down")
-            }
-            .disabled(focus == nil || focus == .pulse)
-
-            Spacer()
-
-            Button("完了") { focus = nil }
-                .fontWeight(.semibold)
-        }
-    }
-
-    /// キーボードを出したまま、次（前）の入力欄へ移る。
-    private func move(by offset: Int) {
-        guard let current = focus,
-              let index = Field.allCases.firstIndex(of: current) else { return }
-        let target = index + offset
-        guard Field.allCases.indices.contains(target) else { return }
-        focus = Field.allCases[target]
     }
 
     private var valuesSection: some View {
@@ -173,5 +137,55 @@ struct RecordFormSections: View {
                     .lineLimit(2...5)
             }
         }
+    }
+}
+
+/// テンキーには改行キーがないので、閉じる手段をキーボードの上に置く。
+///
+/// `Group` や `Section` に付けると中のビューごとに適用されてバーが重複するため、
+/// フォーム全体に 1 つだけ付ける形にしている。
+struct NumberPadToolbar: ViewModifier {
+    @FocusState.Binding var focus: RecordFormSections.Field?
+
+    func body(content: Content) -> some View {
+        content.toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Button {
+                    move(by: -1)
+                } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .disabled(focus == nil || focus == .systolic)
+
+                Button {
+                    move(by: 1)
+                } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .disabled(focus == nil || focus == .pulse)
+
+                Spacer()
+
+                Button("完了") { focus = nil }
+                    .fontWeight(.semibold)
+            }
+        }
+    }
+
+    /// キーボードを出したまま、次（前）の入力欄へ移る。
+    private func move(by offset: Int) {
+        typealias Field = RecordFormSections.Field
+        guard let current = focus,
+              let index = Field.allCases.firstIndex(of: current) else { return }
+        let target = index + offset
+        guard Field.allCases.indices.contains(target) else { return }
+        focus = Field.allCases[target]
+    }
+}
+
+extension View {
+    /// 数値入力中のキーボードに「完了」と項目移動のバーを出す。フォームに 1 回だけ付けること。
+    func numberPadToolbar(focus: FocusState<RecordFormSections.Field?>.Binding) -> some View {
+        modifier(NumberPadToolbar(focus: focus))
     }
 }

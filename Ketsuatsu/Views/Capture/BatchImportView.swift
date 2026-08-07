@@ -237,6 +237,7 @@ struct BatchItemEditView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var draft: BPDraft
+    @FocusState private var focus: RecordFormSections.Field?
     private let standard: BPStandard
     private let onSave: (BPDraft) -> Void
 
@@ -258,8 +259,9 @@ struct BatchItemEditView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                     }
                 }
-                RecordFormSections(draft: $draft, standard: standard)
+                RecordFormSections(draft: $draft, standard: standard, focus: $focus)
             }
+            .numberPadToolbar(focus: $focus)
             .scrollDismissesKeyboard(.interactively)
             .navigationTitle("内容を修正")
             .navigationBarTitleDisplayMode(.inline)
