@@ -2,7 +2,7 @@ import SwiftUI
 
 /// タブ構成のルート画面。
 struct RootView: View {
-    @Environment(AppSettings.self) private var settings
+    @StateObject private var consent = ConsentManager.shared
 
     @State private var selection: Tab = .home
 
@@ -13,12 +13,21 @@ struct RootView: View {
         case settings
     }
 
+    /// App Store 用のスクリーンショットを撮るときは広告を写り込ませない。
+    private var isScreenshotMode: Bool {
+        ProcessInfo.processInfo.environment["SCREENSHOT_MODE"] == "1"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // 広告は画面上部（各タブのナビゲーションバーの上）に固定する。
-            AdBanner()
+            // 同意が取れるまで View 自体を作らない＝広告リクエストも発生しない。
+            if consent.canRequestAds && !isScreenshotMode {
+                AdBanner()
+            }
             tabs
         }
+        .task { ConsentManager.shared.startOnce() }
     }
 
     private var tabs: some View {

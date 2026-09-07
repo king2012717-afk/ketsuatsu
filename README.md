@@ -91,6 +91,19 @@ open Ketsuatsu.xcodeproj
 
 > カメラはシミュレータでは使えません。写真ライブラリからの読み取りで動作を確認できます。
 
+### 広告（開発時の注意）
+
+- Debug ビルドと、App Store 以外から配信されたビルド（Xcode 実行 / Profile / Ad Hoc / TestFlight）は
+  **必ず Google 公式のテスト広告**になります。判定は `Ketsuatsu/Services/Ads/AdConfig.swift` の
+  `isUsingProductionAdUnits` にまとまっています
+- 実機で確認するときは、コンソールに出るテストデバイス ID を Xcode スキームの環境変数
+  `AD_TEST_DEVICE_IDS` にカンマ区切りで設定してください
+- **「Test mode」の表示がない広告には絶対に触れないでください**（無効なトラフィックの原因になります）
+- AdMob のアプリ ID は Info.plist に直書きせず、ビルド構成の `GAD_APPLICATION_IDENTIFIER` で
+  切り替えています（Debug は Google 公式テスト ID）
+- 広告 SDK の初期化と広告のリクエストは、UMP の同意取得 → ATT の順に完了してからのみ行います
+  （`Ketsuatsu/Services/Ads/ConsentManager.swift`）
+
 ### テスト
 
 ```sh

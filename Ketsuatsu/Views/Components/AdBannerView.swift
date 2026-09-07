@@ -4,36 +4,31 @@ import UIKit
 
 /// 画面上部に置くバナー広告。
 ///
-/// Google のサンプルに合わせて、次の 2 点を守っている。
+/// 守っていること（Part 1-4）：
+/// - `load()` は生成時（`makeUIViewController`）で一度だけ呼ぶ。
+///   画面を行き来するたびに読み込み直さないため、`updateUIViewController` では呼ばない
 /// - バナーを載せるビューコントローラを用意し、それ自身を `rootViewController` にする
-/// - 生成した時点で `load()` を呼び、高さは最初から確保しておく
-///   （読み込めるまで高さ 0 にしていると、そもそも広告が表示されない）
+/// - 高さは最初から確保しておく（読み込めるまで高さ 0 にすると広告が表示されない）
+/// - 操作領域との間に背景色を敷き、誤タップを防ぐ
+///
+/// 呼び出し側は `ConsentManager.canRequestAds` が true になるまで
+/// この View を生成しないこと（生成しなければ広告リクエストも発生しない）。
 struct AdBanner: View {
-    var adUnitID: String = AdConfiguration.bannerUnitID
+    var adUnitID: String = AdConfig.bannerUnitID
 
-    @State private var adSize: AdSize = currentOrientationAnchoredAdaptiveBanner(
+    /// 縦向き固定のアプリなので、サイズは生成時に一度決めれば足りる。
+    private let adSize: AdSize = currentOrientationAnchoredAdaptiveBanner(
         width: UIScreen.main.bounds.width
     )
 
     var body: some View {
-        if AdConfiguration.isEnabled {
-            GeometryReader { proxy in
-                AdBannerRepresentable(adUnitID: adUnitID, adSize: adSize)
-                    .frame(width: adSize.size.width, height: adSize.size.height)
-                    .frame(maxWidth: .infinity)
-                    .onAppear { updateSize(width: proxy.size.width) }
-                    .onChange(of: proxy.size.width) { _, width in updateSize(width: width) }
-            }
-            .frame(height: adSize.size.height)
-            .background(Color(.secondarySystemBackground))
-            .accessibilityLabel("広告")
+        if AdConfig.isEnabled {
+            AdBannerRepresentable(adUnitID: adUnitID, adSize: adSize)
+                .frame(height: adSize.size.height)
+                .frame(maxWidth: .infinity)
+                .background(Color(.secondarySystemBackground))
+                .accessibilityLabel("広告")
         }
-    }
-
-    private func updateSize(width: CGFloat) {
-        guard width > 0 else { return }
-        let updated = currentOrientationAnchoredAdaptiveBanner(width: width)
-        if updated.size != adSize.size { adSize = updated }
     }
 }
 
@@ -56,22 +51,14 @@ private struct AdBannerRepresentable: UIViewControllerRepresentable {
         controller.view.frame = CGRect(origin: .zero, size: adSize.size)
         context.coordinator.banner = banner
 
-        AdConfiguration.log("読み込みを開始します（\(adUnitID)）")
+        AdConfig.log("読み込みを開始します（\(adUnitID)）")
         banner.load(Request())
 
         return controller
     }
 
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        guard let banner = context.coordinator.banner else { return }
-        guard banner.adSize.size != adSize.size else { return }
-
-        // 画面の幅が変わったとき（回転など）はサイズを作り直して読み込み直す。
-        banner.adSize = adSize
-        banner.frame = CGRect(origin: .zero, size: adSize.size)
-        uiViewController.view.frame = CGRect(origin: .zero, size: adSize.size)
-        banner.load(Request())
-    }
+    /// 何もしない。ここで `load()` を呼ぶと画面遷移のたびに再読み込みされる（Part 1-4）。
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -81,15 +68,15 @@ private struct AdBannerRepresentable: UIViewControllerRepresentable {
         var banner: BannerView?
 
         func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-            AdConfiguration.log("読み込みに成功しました")
+            AdConfig.log("読み込みに成功しました")
         }
 
         func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
-            AdConfiguration.log("読み込みに失敗しました: \(error.localizedDescription)")
+            AdConfig.log("読み込みに失敗しました: \(error.localizedDescription)")
         }
 
         func bannerViewDidRecordImpression(_ bannerView: BannerView) {
-            AdConfiguration.log("インプレッションを記録しました")
+            AdConfig.log("インプレッションを記録しました")
         }
     }
 }

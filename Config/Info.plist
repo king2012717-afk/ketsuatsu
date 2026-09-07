@@ -20,8 +20,9 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<!-- ビルド構成ごとに切り替える（Debug は Google 公式テストID）。直書き禁止。 -->
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-4243897663299237~4523194742</string>
+	<string>$(GAD_APPLICATION_IDENTIFIER)</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<!-- Google の広告ネットワーク。他ネットワークの ID は AdMob のドキュメントから追記できる。 -->
@@ -36,6 +37,8 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>お客さまの興味に合った広告を表示するために、他社のAppやWebサイトでの行動を追跡する許可を求めています。許可しなくてもアプリの機能はすべてご利用いただけます。</string>
 	<key>NSCameraUsageDescription</key>
 	<string>血圧計の表示を撮影して、測定結果を自動で読み取るためにカメラを使用します。</string>
 	<key>NSPhotoLibraryUsageDescription</key>

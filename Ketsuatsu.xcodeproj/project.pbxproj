@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		1A00000000000000000072 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 1A00000000000000000071 /* GoogleMobileAds */; };
+		1A00000000000000000074 /* UserMessagingPlatform in Frameworks */ = {isa = PBXBuildFile; productRef = 1A00000000000000000073 /* UserMessagingPlatform */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -38,6 +39,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				1A00000000000000000072 /* GoogleMobileAds in Frameworks */,
+				1A00000000000000000074 /* UserMessagingPlatform in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +102,7 @@
 			name = Ketsuatsu;
 			packageProductDependencies = (
 				1A00000000000000000071 /* GoogleMobileAds */,
+				1A00000000000000000073 /* UserMessagingPlatform */,
 			);
 			productName = Ketsuatsu;
 			productReference = 1A00000000000000000006 /* Ketsuatsu.app */;
@@ -158,6 +161,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				1A00000000000000000070 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				1A00000000000000000075 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */,
 			);
 			productRefGroup = 1A00000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -333,6 +337,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = JS7SYSHC3S;
 				ENABLE_PREVIEWS = YES;
+				GAD_APPLICATION_IDENTIFIER = "ca-app-pub-3940256099942544~1458002511";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Config/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -357,6 +362,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = JS7SYSHC3S;
 				ENABLE_PREVIEWS = YES;
+				GAD_APPLICATION_IDENTIFIER = "ca-app-pub-4243897663299237~4523194742";
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Config/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -446,6 +452,14 @@
 				minimumVersion = 12.0.0;
 			};
 		};
+		1A00000000000000000075 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.1.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -453,6 +467,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 1A00000000000000000070 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
 			productName = GoogleMobileAds;
+		};
+		1A00000000000000000073 /* UserMessagingPlatform */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A00000000000000000075 /* XCRemoteSwiftPackageReference "swift-package-manager-google-user-messaging-platform" */;
+			productName = UserMessagingPlatform;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
