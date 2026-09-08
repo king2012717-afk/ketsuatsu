@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="22505" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="launch-view-controller">
+    <device id="retina6_12" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="22504"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--Launch Screen-->
+        <scene sceneID="launch-scene">
+            <objects>
+                <viewController id="launch-view-controller" sceneMemberID="viewController">
+                    <view key="view" contentMode="scaleToFill" id="launch-view">
+                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchBackground" translatesAutoresizingMaskIntoConstraints="NO" id="launch-background"/>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchIcon" translatesAutoresizingMaskIntoConstraints="NO" id="launch-app-mark"/>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="うちの血圧記録" textAlignment="center" lineBreakMode="tailTruncation" numberOfLines="1" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="launch-app-name">
+                                <fontDescription key="fontDescription" type="system" weight="bold" pointSize="23"/>
+                                <color key="textColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="LaunchWordmark" translatesAutoresizingMaskIntoConstraints="NO" id="launch-wordmark"/>
+                        </subviews>
+                        <viewLayoutGuide key="safeArea" id="launch-safe-area"/>
+                        <color key="backgroundColor" red="0.08235294117647059" green="0.29019607843137254" blue="0.4588235294117647" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="launch-background" firstAttribute="top" secondItem="launch-view" secondAttribute="top" id="background-top"/>
+                            <constraint firstItem="launch-background" firstAttribute="leading" secondItem="launch-view" secondAttribute="leading" id="background-leading"/>
+                            <constraint firstItem="launch-view" firstAttribute="trailing" secondItem="launch-background" secondAttribute="trailing" id="background-trailing"/>
+                            <constraint firstItem="launch-view" firstAttribute="bottom" secondItem="launch-background" secondAttribute="bottom" id="background-bottom"/>
+                            <constraint firstItem="launch-app-mark" firstAttribute="centerX" secondItem="launch-view" secondAttribute="centerX" id="mark-center-x"/>
+                            <constraint firstItem="launch-app-mark" firstAttribute="centerY" secondItem="launch-view" secondAttribute="centerY" multiplier="0.92" id="mark-center-y"/>
+                            <constraint firstAttribute="width" constant="118" firstItem="launch-app-mark" id="mark-width"/>
+                            <constraint firstAttribute="height" constant="118" firstItem="launch-app-mark" id="mark-height"/>
+                            <constraint firstItem="launch-app-name" firstAttribute="centerX" secondItem="launch-view" secondAttribute="centerX" id="name-center-x"/>
+                            <constraint firstItem="launch-app-name" firstAttribute="top" secondItem="launch-app-mark" secondAttribute="bottom" constant="22" id="name-top"/>
+                            <constraint firstItem="launch-app-name" firstAttribute="leading" relation="greaterThanOrEqual" secondItem="launch-safe-area" secondAttribute="leading" constant="24" id="name-leading"/>
+                            <constraint firstItem="launch-safe-area" firstAttribute="trailing" relation="greaterThanOrEqual" secondItem="launch-app-name" secondAttribute="trailing" constant="24" id="name-trailing"/>
+                            <constraint firstItem="launch-wordmark" firstAttribute="centerX" secondItem="launch-view" secondAttribute="centerX" id="wordmark-center-x"/>
+                            <constraint firstItem="launch-safe-area" firstAttribute="bottom" secondItem="launch-wordmark" secondAttribute="bottom" constant="46" id="wordmark-bottom"/>
+                            <constraint firstAttribute="width" constant="152" firstItem="launch-wordmark" id="wordmark-width"/>
+                            <constraint firstAttribute="height" constant="28" firstItem="launch-wordmark" id="wordmark-height"/>
+                        </constraints>
+                    </view>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="launch-first-responder" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="53" y="375"/>
+        </scene>
+    </scenes>
+    <resources>
+        <image name="LaunchBackground" width="129" height="280"/>
+        <image name="LaunchIcon" width="118" height="118"/>
+        <image name="LaunchWordmark" width="152" height="28"/>
+    </resources>
+</document>
