@@ -1,4 +1,3 @@
-import GoogleMobileAds
 import SwiftData
 import SwiftUI
 import UserNotifications
@@ -23,13 +22,7 @@ struct KetsuatsuApp: App {
     }()
 
     init() {
-        // バナーの読み込みより前に済ませておく必要があるため、画面の表示を待たずにここで初期化する。
-        MobileAds.shared.start { status in
-            let adapters = status.adapterStatusesByClassName
-                .map { "\($0.key): \($0.value.state == .ready ? "ready" : "not ready")" }
-                .joined(separator: ", ")
-            AdConfiguration.log("SDK の初期化が完了しました（\(adapters)）")
-        }
+        LevelPlayBannerController.shared.start()
     }
 
     var body: some Scene {

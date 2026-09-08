@@ -87,6 +87,11 @@ struct SettingsView: View {
 
                 dataSection
 
+                YutarouLabsRecommendedApps(
+                    currentAppID: YutarouAppsConfig.currentAppID,
+                    currentCategory: YutarouAppsConfig.currentCategory
+                )
+
                 Section {
                     HStack(spacing: 14) {
                         AppMarkView(size: 52)

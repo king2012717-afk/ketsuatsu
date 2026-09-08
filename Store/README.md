@@ -34,25 +34,25 @@
 
 > iPad にも対応させたい場合は `TARGETED_DEVICE_FAMILY` を `"1,2"` に戻してください。ただし iPad 用のスクリーンショットと動作確認が別途必要になります。
 
-### 1-4. 広告（AdMob）について
+### 1-4. 広告（Unity LevelPlay）について
 
 画面上部にバナー広告を表示します。設定は `Ketsuatsu/Services/Ads/AdConfiguration.swift` にまとめています。
 
 | 項目 | 値 |
 | --- | --- |
-| アプリ ID | `ca-app-pub-4243897663299237~4523194742`（`Info.plist` の `GADApplicationIdentifier`） |
-| バナー広告ユニット（本番） | `ca-app-pub-4243897663299237/7828014939` |
+| アプリ ID | `[旧広告ID削除済み]`（`Info.plist` の `LevelPlayAppKey`） |
+| バナー広告ユニット（本番） | `[旧広告ID削除済み]` |
 | バナー広告ユニット（開発中） | Google のテスト用 ID |
 | SDK | Google Mobile Ads（Swift Package・12.x） |
 
-**Debug ビルドではテスト広告が出ます。** 自分のアプリで自分の本番広告をタップすると AdMob の規約違反となり、アカウントが停止されることがあるためです。実機で本番の広告を確認したい場合は、AdMob の管理画面で自分の端末を「テストデバイス」に登録してください。
+**Debug ビルドではテスト広告が出ます。** 自分のアプリで自分の本番広告をタップすると Unity LevelPlay の規約違反となり、アカウントが停止されることがあるためです。実機で本番の広告を確認したい場合は、Unity LevelPlay の管理画面で自分の端末を「テストデバイス」に登録してください。
 
 初回ビルド時、Xcode が Swift Package を取得します（数分かかります）。取得に失敗する場合は
 File → Packages → Resolve Package Versions を実行してください。
 
-#### ★ AdMob 側で必要な作業
+#### ★ Unity LevelPlay 側で必要な作業
 
-- AdMob の管理画面で、このアプリを **App Store 公開後に「アプリを検索して追加」で紐付ける**（公開前は「手動で追加」のままで構いません）
+- Unity LevelPlay の管理画面で、このアプリを **App Store 公開後に「アプリを検索して追加」で紐付ける**（公開前は「手動で追加」のままで構いません）
 - 広告が表示されるまで、新規アプリでは数時間〜1 日ほどかかることがあります
 - 支払い情報を登録していないと収益が支払われません
 
@@ -133,7 +133,7 @@ Organizer → Distribute App → App Store Connect → Upload
 - [ ] Team を選び、署名が通っている
 - [ ] プライバシーポリシー URL とサポート URL が実際に開ける
 - [ ] スクリーンショット 6 枚をアップロードした
-- [ ] App のプライバシーで、広告（AdMob）が扱うデータを申告した
+- [ ] App のプライバシーで、広告（Unity LevelPlay）が扱うデータを申告した
       （`store-listing.md` の表のとおり。「データを収集していません」は選ばない）
 - [ ] 年齢指定を回答した（医療／治療情報: まれ／軽度 → 12+）
 - [ ] 審査メモに HealthKit とカメラの用途、動作確認手順を書いた

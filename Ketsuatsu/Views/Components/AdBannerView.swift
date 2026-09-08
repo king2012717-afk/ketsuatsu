@@ -1,95 +1,108 @@
-import GoogleMobileAds
+import IronSource
 import SwiftUI
 import UIKit
 
-/// 画面上部に置くバナー広告。
-///
-/// Google のサンプルに合わせて、次の 2 点を守っている。
-/// - バナーを載せるビューコントローラを用意し、それ自身を `rootViewController` にする
-/// - 生成した時点で `load()` を呼び、高さは最初から確保しておく
-///   （読み込めるまで高さ 0 にしていると、そもそも広告が表示されない）
-struct AdBanner: View {
-    var adUnitID: String = AdConfiguration.bannerUnitID
+private enum AdConfig {
+    static let appKey = AdConfiguration.appKey
+    static let bannerUnitID = AdConfiguration.bannerUnitID
+    static let isConfigured = AdConfiguration.isConfigured
+}
 
-    @State private var adSize: AdSize = currentOrientationAnchoredAdaptiveBanner(
-        width: UIScreen.main.bounds.width
-    )
+final class LevelPlayBannerController: ObservableObject {
+    static let shared = LevelPlayBannerController()
 
-    var body: some View {
-        if AdConfiguration.isEnabled {
-            GeometryReader { proxy in
-                AdBannerRepresentable(adUnitID: adUnitID, adSize: adSize)
-                    .frame(width: adSize.size.width, height: adSize.size.height)
-                    .frame(maxWidth: .infinity)
-                    .onAppear { updateSize(width: proxy.size.width) }
-                    .onChange(of: proxy.size.width) { _, width in updateSize(width: width) }
+    @Published private(set) var isReady = false
+    private var isStarting = false
+
+    private init() {}
+
+    func start() {
+        guard !isReady, !isStarting, AdConfig.isConfigured else { return }
+        isStarting = true
+        #if DEBUG
+        LevelPlay.setAdaptersDebug(true)
+        #endif
+        let request = LPMInitRequestBuilder(appKey: AdConfig.appKey).build()
+        LevelPlay.initWith(request) { [weak self] _, error in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isStarting = false
+                if let error {
+                    #if DEBUG
+                    print("[Ads] LevelPlay 初期化失敗: \(error.localizedDescription)")
+                    #endif
+                    return
+                }
+                self.isReady = true
             }
-            .frame(height: adSize.size.height)
-            .background(Color(.secondarySystemBackground))
-            .accessibilityLabel("広告")
         }
-    }
-
-    private func updateSize(width: CGFloat) {
-        guard width > 0 else { return }
-        let updated = currentOrientationAnchoredAdaptiveBanner(width: width)
-        if updated.size != adSize.size { adSize = updated }
     }
 }
 
-private struct AdBannerRepresentable: UIViewControllerRepresentable {
-    let adUnitID: String
-    let adSize: AdSize
+private struct LevelPlayBannerRepresentable: UIViewRepresentable {
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeUIViewController(context: Context) -> UIViewController {
-        let controller = UIViewController()
-        controller.view.backgroundColor = .clear
-
-        let banner = BannerView(adSize: adSize)
-        banner.adUnitID = adUnitID
-        // 自分自身をルートにするため、キーウィンドウを探す必要がない。
-        banner.rootViewController = controller
-        banner.delegate = context.coordinator
-        banner.frame = CGRect(origin: .zero, size: adSize.size)
-
-        controller.view.addSubview(banner)
-        controller.view.frame = CGRect(origin: .zero, size: adSize.size)
+    func makeUIView(context: Context) -> LPMBannerAdView {
+        let banner = LPMBannerAdView(adUnitId: AdConfig.bannerUnitID)
         context.coordinator.banner = banner
-
-        AdConfiguration.log("読み込みを開始します（\(adUnitID)）")
-        banner.load(Request())
-
-        return controller
-    }
-
-    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-        guard let banner = context.coordinator.banner else { return }
-        guard banner.adSize.size != adSize.size else { return }
-
-        // 画面の幅が変わったとき（回転など）はサイズを作り直して読み込み直す。
-        banner.adSize = adSize
-        banner.frame = CGRect(origin: .zero, size: adSize.size)
-        uiViewController.view.frame = CGRect(origin: .zero, size: adSize.size)
-        banner.load(Request())
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-
-    final class Coordinator: NSObject, BannerViewDelegate {
-        var banner: BannerView?
-
-        func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-            AdConfiguration.log("読み込みに成功しました")
+        banner.setDelegate(context.coordinator)
+        if let viewController = Self.topViewController() {
+            banner.loadAd(with: viewController)
         }
+        return banner
+    }
 
-        func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
-            AdConfiguration.log("読み込みに失敗しました: \(error.localizedDescription)")
+    func updateUIView(_ uiView: LPMBannerAdView, context: Context) {}
+
+    static func dismantleUIView(_ uiView: LPMBannerAdView, coordinator: Coordinator) {
+        coordinator.banner = nil
+        uiView.destroy()
+    }
+
+    private static func topViewController() -> UIViewController? {
+        let root = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first { $0.isKeyWindow }?
+            .rootViewController
+        var current = root
+        while let presented = current?.presentedViewController { current = presented }
+        return current
+    }
+
+    final class Coordinator: NSObject, LPMBannerAdViewDelegate {
+        weak var banner: LPMBannerAdView?
+        func didLoadAd(with adInfo: LPMAdInfo) {}
+        func didFailToLoadAd(withAdUnitId adUnitId: String, error: Error) {
+            #if DEBUG
+            print("[Ads] バナー読み込み失敗: \(error.localizedDescription)")
+            #endif
+            DispatchQueue.main.asyncAfter(deadline: .now() + 10) { [weak self] in
+                guard let banner = self?.banner,
+                      let viewController = LevelPlayBannerRepresentable.topViewController()
+                else { return }
+                banner.loadAd(with: viewController)
+            }
         }
+        func didClickAd(with adInfo: LPMAdInfo) {}
+        func didDisplayAd(with adInfo: LPMAdInfo) {}
+        func didFailToDisplayAd(with adInfo: LPMAdInfo, error: Error) {}
+        func didLeaveApp(with adInfo: LPMAdInfo) {}
+        func didExpandAd(with adInfo: LPMAdInfo) {}
+        func didCollapseAd(with adInfo: LPMAdInfo) {}
+    }
+}
 
-        func bannerViewDidRecordImpression(_ bannerView: BannerView) {
-            AdConfiguration.log("インプレッションを記録しました")
+struct AdBanner: View {
+    @ObservedObject private var controller = LevelPlayBannerController.shared
+
+    var body: some View {
+        if AdConfiguration.isEnabled, controller.isReady {
+            LevelPlayBannerRepresentable()
+                .frame(width: 320, height: 50)
+                .frame(maxWidth: .infinity)
+                .background(Color(.secondarySystemBackground))
+                .accessibilityLabel("広告")
         }
     }
 }

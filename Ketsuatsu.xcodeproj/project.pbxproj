@@ -7,7 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1A00000000000000000072 /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 1A00000000000000000071 /* GoogleMobileAds */; };
+		A45C477A0AA1C4889FF5F4F4 /* UnityMediationSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 4809D164846C5669FD7B569A /* UnityMediationSDK */; };
+		C8ABA2662F4BFE5A0A0BEDF8 /* UnityAdsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = D0BCE996834A335E596E73F6 /* UnityAdsAdapter */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -28,8 +29,28 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		1A00000000000000000008 /* Ketsuatsu */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = Ketsuatsu; sourceTree = "<group>"; };
-		1A00000000000000000009 /* KetsuatsuTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = KetsuatsuTests; sourceTree = "<group>"; };
+		1A00000000000000000008 /* Ketsuatsu */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = Ketsuatsu;
+			sourceTree = "<group>";
+		};
+		1A00000000000000000009 /* KetsuatsuTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
+			explicitFileTypes = {
+			};
+			explicitFolders = (
+			);
+			path = KetsuatsuTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,7 +58,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1A00000000000000000072 /* GoogleMobileAds in Frameworks */,
+				A45C477A0AA1C4889FF5F4F4 /* UnityMediationSDK in Frameworks */,
+				C8ABA2662F4BFE5A0A0BEDF8 /* UnityAdsAdapter in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -99,7 +121,8 @@
 			);
 			name = Ketsuatsu;
 			packageProductDependencies = (
-				1A00000000000000000071 /* GoogleMobileAds */,
+				4809D164846C5669FD7B569A /* UnityMediationSDK */,
+				D0BCE996834A335E596E73F6 /* UnityAdsAdapter */,
 			);
 			productName = Ketsuatsu;
 			productReference = 1A00000000000000000006 /* Ketsuatsu.app */;
@@ -157,7 +180,8 @@
 			mainGroup = 1A00000000000000000002;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				1A00000000000000000070 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
+				5C57887C899BA90D5A354CCB /* XCRemoteSwiftPackageReference "LevelPlay-Swift-Package" */,
+				5CD5F1E1C044B422ECD834AD /* XCRemoteSwiftPackageReference "LevelPlay-UnityAds-Adapter-Swift-Package" */,
 			);
 			productRefGroup = 1A00000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -340,6 +364,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.Ketsuatsu;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -364,6 +392,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.example.Ketsuatsu;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -438,21 +470,34 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		1A00000000000000000070 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+		5C57887C899BA90D5A354CCB /* XCRemoteSwiftPackageReference "LevelPlay-Swift-Package" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			repositoryURL = "https://github.com/ironsource-mobile/LevelPlay-Swift-Package";
 			requirement = {
 				kind = upToNextMajorVersion;
-				minimumVersion = 12.0.0;
+				minimumVersion = 9.5.0;
+			};
+		};
+		5CD5F1E1C044B422ECD834AD /* XCRemoteSwiftPackageReference "LevelPlay-UnityAds-Adapter-Swift-Package" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ironsource-mobile/LevelPlay-UnityAds-Adapter-Swift-Package";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.8.1;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		1A00000000000000000071 /* GoogleMobileAds */ = {
+		4809D164846C5669FD7B569A /* UnityMediationSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1A00000000000000000070 /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
-			productName = GoogleMobileAds;
+			package = 5C57887C899BA90D5A354CCB /* XCRemoteSwiftPackageReference "LevelPlay-Swift-Package" */;
+			productName = UnityMediationSDK;
+		};
+		D0BCE996834A335E596E73F6 /* UnityAdsAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5CD5F1E1C044B422ECD834AD /* XCRemoteSwiftPackageReference "LevelPlay-UnityAds-Adapter-Swift-Package" */;
+			productName = UnityAdsAdapter;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

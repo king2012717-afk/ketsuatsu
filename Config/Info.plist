@@ -20,15 +20,14 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-4243897663299237~4523194742</string>
+	<key>LevelPlayAppKey</key>
+	<string>27f76401d</string>
+	<key>LevelPlayBannerAdUnitID</key>
+	<string>c4jqtrjl6hemgp6b</string>
 	<key>SKAdNetworkItems</key>
 	<array>
-		<!-- Google の広告ネットワーク。他ネットワークの ID は AdMob のドキュメントから追記できる。 -->
-		<dict>
-			<key>SKAdNetworkIdentifier</key>
-			<string>cstr6suwn9.skadnetwork</string>
-		</dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>su67r6k2v3.skadnetwork</string></dict>
+		<dict><key>SKAdNetworkIdentifier</key><string>4dzt52r2t5.skadnetwork</string></dict>
 	</array>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.healthcare-fitness</string>
