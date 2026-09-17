@@ -2,9 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- トラッキングは行わない -->
+	<!--
+	  ATT の許可が得られた場合はパーソナライズ広告が配信されるため「トラッキングあり」。
+	  トラッキング先のドメインは Google Mobile Ads SDK 側のマニフェストで宣言されるので、
+	  アプリ側は空のままでよい（アプリ自身は外部へ通信しない）。
+	-->
 	<key>NSPrivacyTracking</key>
-	<false/>
+	<true/>
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 
