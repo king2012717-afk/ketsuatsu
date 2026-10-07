@@ -135,6 +135,13 @@ struct ChartsView: View {
             .background(Theme.pageBackground)
             .navigationTitle("グラフ")
         }
+        .onChange(of: period.filter, initial: true) { _, newValue in
+            if newValue == .week1 {
+                AnalyticsService.log("weekly_summary_viewed", parameters: [
+                    "record_count": periodSamples.count,
+                ])
+            }
+        }
     }
 
     private var emptyDescription: String {

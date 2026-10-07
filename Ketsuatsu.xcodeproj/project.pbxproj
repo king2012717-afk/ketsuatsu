@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		A45C477A0AA1C4889FF5F4F4 /* UnityMediationSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 4809D164846C5669FD7B569A /* UnityMediationSDK */; };
 		C8ABA2662F4BFE5A0A0BEDF8 /* UnityAdsAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = D0BCE996834A335E596E73F6 /* UnityAdsAdapter */; };
+		FB0000000000000000000003 /* FirebaseAnalyticsCore in Frameworks */ = {isa = PBXBuildFile; productRef = FB0000000000000000000002 /* FirebaseAnalyticsCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -60,6 +61,7 @@
 			files = (
 				A45C477A0AA1C4889FF5F4F4 /* UnityMediationSDK in Frameworks */,
 				C8ABA2662F4BFE5A0A0BEDF8 /* UnityAdsAdapter in Frameworks */,
+				FB0000000000000000000003 /* FirebaseAnalyticsCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -123,6 +125,7 @@
 			packageProductDependencies = (
 				4809D164846C5669FD7B569A /* UnityMediationSDK */,
 				D0BCE996834A335E596E73F6 /* UnityAdsAdapter */,
+				FB0000000000000000000002 /* FirebaseAnalyticsCore */,
 			);
 			productName = Ketsuatsu;
 			productReference = 1A00000000000000000006 /* Ketsuatsu.app */;
@@ -182,6 +185,7 @@
 			packageReferences = (
 				5C57887C899BA90D5A354CCB /* XCRemoteSwiftPackageReference "LevelPlay-Swift-Package" */,
 				5CD5F1E1C044B422ECD834AD /* XCRemoteSwiftPackageReference "LevelPlay-UnityAds-Adapter-Swift-Package" */,
+				FB0000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = 1A00000000000000000003 /* Products */;
 			projectDirPath = "";
@@ -486,6 +490,14 @@
 				minimumVersion = 5.8.1;
 			};
 		};
+		FB0000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = exactVersion;
+				version = 12.19.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -498,6 +510,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 5CD5F1E1C044B422ECD834AD /* XCRemoteSwiftPackageReference "LevelPlay-UnityAds-Adapter-Swift-Package" */;
 			productName = UnityAdsAdapter;
+		};
+		FB0000000000000000000002 /* FirebaseAnalyticsCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FB0000000000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalyticsCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

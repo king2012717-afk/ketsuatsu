@@ -22,6 +22,7 @@ struct KetsuatsuApp: App {
     }()
 
     init() {
+        AnalyticsService.configure()
         LevelPlayBannerController.shared.start()
     }
 

@@ -32,6 +32,18 @@ enum RecordService {
         context.insert(record)
         try? context.save()
 
+        AnalyticsService.log("blood_pressure_entry_completed", parameters: [
+            "entry_method": draft.source.rawValue,
+        ])
+        AnalyticsService.mainActionCompleted(action: "blood_pressure_entry")
+
+        let count = (try? context.fetchCount(FetchDescriptor<BPRecord>())) ?? 0
+        let milestoneKey = "analytics.blood_pressure.third_entry_sent"
+        if count >= 3, !UserDefaults.standard.bool(forKey: milestoneKey) {
+            AnalyticsService.log("third_entry_completed")
+            UserDefaults.standard.set(true, forKey: milestoneKey)
+        }
+
         await syncToHealthKitIfNeeded(record, settings: settings)
         return record
     }

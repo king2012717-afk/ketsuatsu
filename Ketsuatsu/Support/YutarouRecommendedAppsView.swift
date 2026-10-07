@@ -52,6 +52,11 @@ struct YutarouLabsRecommendedApps: View {
                 ForEach(viewModel.apps) { app in
                     Button {
                         if let url = app.iosURL {
+                            AnalyticsService.recommendedAppClick(
+                                destinationApp: app.id,
+                                placement: "settings_recommendations",
+                                campaign: "yutaroulabs_cross_promo"
+                            )
                             openURL(url)
                         }
                     } label: {
@@ -68,6 +73,13 @@ struct YutarouLabsRecommendedApps: View {
         }
         .task {
             await viewModel.load()
+            for app in viewModel.apps {
+                AnalyticsService.recommendedAppImpression(
+                    destinationApp: app.id,
+                    placement: "settings_recommendations",
+                    campaign: "yutaroulabs_cross_promo"
+                )
+            }
         }
     }
 

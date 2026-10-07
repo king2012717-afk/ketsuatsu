@@ -71,6 +71,13 @@ struct RecordEditView: View {
             }
         }
         .interactiveDismissDisabled(isSaving)
+        .onAppear {
+            if !isEditing {
+                AnalyticsService.log("blood_pressure_entry_started", parameters: [
+                    "entry_method": draft.source.rawValue,
+                ])
+            }
+        }
     }
 
     private var isEditing: Bool {
