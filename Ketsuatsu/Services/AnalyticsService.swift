@@ -17,10 +17,24 @@ enum AnalyticsService {
         Analytics.logEvent(name, parameters: parameters)
     }
 
-    static func onboardingCompleted() {
-        log("onboarding_complete")
+    /// blood_pressure_entry_started / _completed の entry_method に入れる値。
+    enum EntryMethod {
+        /// 手入力（RecordSource.manual と同じ値）
+        static let manual = "manual"
+        /// 写真 1 枚から読み取り（RecordSource.photo と同じ値）
+        static let photo = "photo"
+        /// 写真をまとめて読み取り
+        static let photoBatch = "photo_batch"
     }
 
+    // onboarding_complete は送らない。
+    // このアプリにはオンボーディング画面がなく、完了に当たる操作が存在しないため、
+    // 代わりの画面に結び付けると意味の違うデータになる。導入する場合はその完了時に
+    // log("onboarding_complete") を追加する。
+
+    /// アプリ横断で「主要な操作を終えた」ことを数える共通イベント。
+    /// 個別イベント（blood_pressure_entry_completed など）と同じタイミングで送るため、
+    /// 両者を足し合わせて集計しないこと（詳しくは FIREBASE_ANALYTICS.md）。
     static func mainActionCompleted(action: String) {
         log("main_action_complete", parameters: ["action": action])
     }

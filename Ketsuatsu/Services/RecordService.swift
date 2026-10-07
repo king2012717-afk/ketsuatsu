@@ -13,9 +13,46 @@ enum RecordService {
 
     // MARK: - 作成・更新・削除
 
+    /// 1 件を記録する（手入力・写真 1 枚）。
+    /// 分析イベントは、永続保存（`context.save()`）に成功した場合だけ送る。
     @discardableResult
     static func create(from draft: BPDraft, context: ModelContext, settings: AppSettings) async -> BPRecord? {
+        guard let result = await insert(draft, context: context, settings: settings) else { return nil }
+        if result.persisted {
+            logEntryCompleted(method: draft.source.rawValue, persistedCount: 1)
+        }
+        return result.record
+    }
+
+    /// 写真のまとめて記録で、選ばれた記録を順に保存し、永続保存できた件数を返す。
+    /// 分析イベントは 1 回のまとめて記録につき 1 回だけ送る（件数は record_count）。
+    @discardableResult
+    static func createBatch(from drafts: [BPDraft], context: ModelContext, settings: AppSettings) async -> Int {
+        var persistedCount = 0
+        for draft in drafts {
+            if let result = await insert(draft, context: context, settings: settings), result.persisted {
+                persistedCount += 1
+            }
+        }
+        if persistedCount > 0 {
+            logEntryCompleted(method: AnalyticsService.EntryMethod.photoBatch, persistedCount: persistedCount)
+        }
+        return persistedCount
+    }
+
+    /// 記録を追加して保存する。`persisted` は `context.save()` が成功したかどうか。
+    /// 失敗してもコンテキストには残る（従来どおり画面には表示され、自動保存の対象になる）。
+    private static func insert(
+        _ draft: BPDraft,
+        context: ModelContext,
+        settings: AppSettings
+    ) async -> (record: BPRecord, persisted: Bool)? {
         guard let systolic = draft.systolic, let diastolic = draft.diastolic else { return nil }
+
+        // 3 件目の判定に使う件数を、この記録を加える前の状態から引き継ぐ（初回のみ）。
+        EntryMilestoneTracker().migrateIfNeeded {
+            existingEntryCount(context: context)
+        }
 
         let record = BPRecord(
             measuredAt: draft.measuredAt,
@@ -30,22 +67,44 @@ enum RecordService {
             photoData: settings.savePhotoWithRecord ? draft.photoData : nil
         )
         context.insert(record)
-        try? context.save()
 
-        AnalyticsService.log("blood_pressure_entry_completed", parameters: [
-            "entry_method": draft.source.rawValue,
-        ])
-        AnalyticsService.mainActionCompleted(action: "blood_pressure_entry")
-
-        let count = (try? context.fetchCount(FetchDescriptor<BPRecord>())) ?? 0
-        let milestoneKey = "analytics.blood_pressure.third_entry_sent"
-        if count >= 3, !UserDefaults.standard.bool(forKey: milestoneKey) {
-            AnalyticsService.log("third_entry_completed")
-            UserDefaults.standard.set(true, forKey: milestoneKey)
+        let persisted: Bool
+        do {
+            try context.save()
+            persisted = true
+        } catch {
+            persisted = false
+            #if DEBUG
+            print("RecordService: 記録の保存に失敗しました: \(error)")
+            #endif
         }
 
         await syncToHealthKitIfNeeded(record, settings: settings)
-        return record
+        return (record, persisted)
+    }
+
+    /// ヘルスケアから取り込んだものを除いた、保存済みの記録件数。
+    private static func existingEntryCount(context: ModelContext) -> Int {
+        let healthKitRaw = RecordSource.healthKit.rawValue
+        let descriptor = FetchDescriptor<BPRecord>(
+            predicate: #Predicate<BPRecord> { $0.sourceRaw != healthKitRaw }
+        )
+        return (try? context.fetchCount(descriptor)) ?? 0
+    }
+
+    /// 保存に成功した記録について、完了イベントと 3 件目の到達イベントを送る。
+    /// 送るのは記録方法と件数だけで、血圧値・脈拍・メモなどの内容は含めない。
+    private static func logEntryCompleted(method: String, persistedCount: Int) {
+        var parameters: [String: Any] = ["entry_method": method]
+        if method == AnalyticsService.EntryMethod.photoBatch {
+            parameters["record_count"] = persistedCount
+        }
+        AnalyticsService.log("blood_pressure_entry_completed", parameters: parameters)
+        AnalyticsService.mainActionCompleted(action: "blood_pressure_entry")
+
+        if EntryMilestoneTracker().addCompletedEntries(persistedCount) {
+            AnalyticsService.log("third_entry_completed")
+        }
     }
 
     static func update(_ record: BPRecord, with draft: BPDraft, context: ModelContext, settings: AppSettings) async {

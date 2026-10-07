@@ -7,6 +7,9 @@ private final class YutarouRecommendedAppsViewModel: ObservableObject {
     private let currentAppID: String
     private let currentCategory: String
     private var hasLoaded = false
+    /// recommended_app_impression を送ったアプリの ID。
+    /// 設定タブはアプリの起動中ずっと保持されるため、1 起動につきアプリごとに 1 回になる。
+    private var impressionLoggedIDs = Set<String>()
 
     init(currentAppID: String, currentCategory: String) {
         self.currentAppID = currentAppID
@@ -21,6 +24,11 @@ private final class YutarouRecommendedAppsViewModel: ObservableObject {
             currentAppID: currentAppID,
             currentCategory: currentCategory
         )
+    }
+
+    /// 行が実際に画面に出たときに呼ぶ。まだ送っていないアプリなら true を返し、送信済みとして記録する。
+    func shouldLogImpression(for app: YutarouApp) -> Bool {
+        impressionLoggedIDs.insert(app.id).inserted
     }
 }
 
@@ -64,6 +72,16 @@ struct YutarouLabsRecommendedApps: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("App Storeで開きます")
+                    .onAppear {
+                        // 一覧は遅延表示されるため、行の onAppear が「画面に出た」ことに当たる。
+                        // スクロールや再描画で何度呼ばれても、アプリごとに 1 回だけ送る。
+                        guard viewModel.shouldLogImpression(for: app) else { return }
+                        AnalyticsService.recommendedAppImpression(
+                            destinationApp: app.id,
+                            placement: "settings_recommendations",
+                            campaign: "yutaroulabs_cross_promo"
+                        )
+                    }
                 }
             }
         } header: {
@@ -73,13 +91,6 @@ struct YutarouLabsRecommendedApps: View {
         }
         .task {
             await viewModel.load()
-            for app in viewModel.apps {
-                AnalyticsService.recommendedAppImpression(
-                    destinationApp: app.id,
-                    placement: "settings_recommendations",
-                    campaign: "yutaroulabs_cross_promo"
-                )
-            }
         }
     }
 

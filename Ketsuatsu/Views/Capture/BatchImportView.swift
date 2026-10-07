@@ -10,6 +10,8 @@ struct BatchImportView: View {
 
     @State private var model: BatchImportModel
     @State private var editingItemID: UUID?
+    /// blood_pressure_entry_started を、この画面を開いた 1 回につき 1 回だけ送るための印。
+    @State private var hasLoggedEntryStart = false
 
     init(photos: [PickedPhoto], defaultArm: MeasurementArm) {
         _model = State(initialValue: BatchImportModel(photos: photos, defaultArm: defaultArm))
@@ -52,6 +54,13 @@ struct BatchImportView: View {
                 BatchItemEditView(draft: item.draft, standard: settings.standard) { updated in
                     model.update(updated, for: item.id)
                 }
+            }
+            .onAppear {
+                guard !hasLoggedEntryStart else { return }
+                hasLoggedEntryStart = true
+                AnalyticsService.log("blood_pressure_entry_started", parameters: [
+                    "entry_method": AnalyticsService.EntryMethod.photoBatch,
+                ])
             }
             .task {
                 await model.analyze()
