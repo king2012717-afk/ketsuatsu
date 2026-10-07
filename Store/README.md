@@ -23,14 +23,16 @@
 | 項目 | 値 | 場所 |
 | --- | --- | --- |
 | 表示名 | うちの血圧記録 | `Config/Info.plist` |
-| バージョン | 1.0 | `MARKETING_VERSION` |
-| ビルド番号 | 1 | `CURRENT_PROJECT_VERSION` |
+| バージョン | 1.0.1（Firebase Analytics 導入の更新） | `MARKETING_VERSION` |
+| ビルド番号 | 2 | `CURRENT_PROJECT_VERSION` |
 | 対応端末 | iPhone のみ | `TARGETED_DEVICE_FAMILY = 1` |
 | 最低 iOS | 17.0 | `IPHONEOS_DEPLOYMENT_TARGET` |
 | カテゴリ | 健康＆フィットネス | `LSApplicationCategoryType` |
 | 暗号化の申告 | 使用しない | `ITSAppUsesNonExemptEncryption` |
-| プライバシーマニフェスト | 収集なし・UserDefaults の理由申告済み | `Ketsuatsu/PrivacyInfo.xcprivacy` |
+| プライバシーマニフェスト | アプリ自身の収集なし（SDK 分は各 SDK のマニフェスト）・UserDefaults の理由申告済み | `Ketsuatsu/PrivacyInfo.xcprivacy` |
 | アプリアイコン | 通常・ダーク・色合いの 3 種 | `Ketsuatsu/Assets.xcassets/AppIcon.appiconset` |
+
+> **バージョンの上げ方**: App Store Connect に出ている最新版より大きい番号にします。不具合修正や内部の変更は 3 桁目（1.0.1 → 1.0.2）、目に見える機能追加は 2 桁目（1.0 → 1.1）を上げ、ビルド番号はアップロードのたびに 1 ずつ増やします。同じバージョンでビルドを上げ直す場合も、ビルド番号は必ず増やしてください。
 
 > iPad にも対応させたい場合は `TARGETED_DEVICE_FAMILY` を `"1,2"` に戻してください。ただし iPad 用のスクリーンショットと動作確認が別途必要になります。
 
@@ -55,6 +57,20 @@ File → Packages → Resolve Package Versions を実行してください。
 - Unity LevelPlay の管理画面で、このアプリを **App Store 公開後に「アプリを検索して追加」で紐付ける**（公開前は「手動で追加」のままで構いません）
 - 広告が表示されるまで、新規アプリでは数時間〜1 日ほどかかることがあります
 - 支払い情報を登録していないと収益が支払われません
+
+### 1-5. アクセス解析（Firebase Analytics）について
+
+イベントの一覧・送るタイミング・重複の防ぎ方・DebugView での確認手順は、リポジトリ直下の `FIREBASE_ANALYTICS.md` にまとめています。
+
+#### ★ 1.0.1 の提出前に必要な作業
+
+1. **バンドル ID の一致確認**: App Store Connect に登録済みの本番バンドル ID と、プロジェクトの `PRODUCT_BUNDLE_IDENTIFIER`、`Ketsuatsu/GoogleService-Info.plist` の `BUNDLE_ID`（現在はいずれも `com.example.Ketsuatsu`）が同じか確認する。
+   本番が違う値の場合は、**アプリのバンドル ID は変えず**、Firebase コンソールで本番のバンドル ID の iOS アプリを追加して、その `GoogleService-Info.plist` に差し替える。
+2. **Swift Package の解決**: Xcode で File → Packages → Resolve Package Versions を実行し、`Package.resolved` に追加された `firebase-ios-sdk`（12.19.2）などの固定をコミットする。
+3. **ビルドとテスト**: ⌘B でビルド、⌘U でテスト（`EntryMilestoneTrackerTests` を含む）。LevelPlay と一緒にリンクして警告・エラーが出ないことを確認する。
+4. **DebugView**: `FIREBASE_ANALYTICS.md` の確認表どおりにイベントが出ることを確認する。
+5. **App のプライバシー**: `store-listing.md` の表に合わせて「おおよその位置情報（アナリティクス）」を追加し、Firebase の案内と照合する。
+6. **プライバシーポリシー**: 更新した `privacy-policy.md`（6. アクセス解析について）を公開ページに反映する。
 
 ## 2. ★ プライバシーポリシーとサポートページの公開
 
@@ -133,8 +149,12 @@ Organizer → Distribute App → App Store Connect → Upload
 - [ ] Team を選び、署名が通っている
 - [ ] プライバシーポリシー URL とサポート URL が実際に開ける
 - [ ] スクリーンショット 6 枚をアップロードした
-- [ ] App のプライバシーで、広告（Unity LevelPlay）が扱うデータを申告した
+- [ ] App のプライバシーで、広告（Unity LevelPlay）とアクセス解析（Firebase Analytics）が扱うデータを申告した
       （`store-listing.md` の表のとおり。「データを収集していません」は選ばない）
+- [ ] 本番のバンドル ID と `GoogleService-Info.plist` の `BUNDLE_ID` が一致している
+- [ ] `Package.resolved` に Firebase の固定が入った状態でコミットした
+- [ ] DebugView で `FIREBASE_ANALYTICS.md` の確認表どおりにイベントが出た（健康情報がパラメータに含まれていない）
+- [ ] 更新したプライバシーポリシーを公開した
 - [ ] 年齢指定を回答した（医療／治療情報: まれ／軽度 → 12+）
 - [ ] 審査メモに HealthKit とカメラの用途、動作確認手順を書いた
 - [ ] 血圧計の写真を審査用に添付した

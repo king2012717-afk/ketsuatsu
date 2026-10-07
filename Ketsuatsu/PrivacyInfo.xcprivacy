@@ -9,8 +9,11 @@
 	<array/>
 
 	<!--
-	  このアプリ自身が収集するデータはない（記録は端末内と、ユーザーが許可した場合のヘルスケアのみ）。
-	  広告（Google Mobile Ads SDK）が収集するデータは SDK 側のプライバシーマニフェストで宣言される。
+	  血圧・脈拍・メモ・写真などの記録は端末内（と、ユーザーが許可した場合のヘルスケア）にのみ保存し、外部へ送らない。
+	  外部へ送られるのは次の SDK が扱うデータで、それぞれの SDK のプライバシーマニフェストで宣言される。
+	  - 広告: Unity LevelPlay（Unity Ads アダプタを含む）
+	  - アクセス解析: Firebase Analytics（FirebaseAnalyticsCore。IDFA は収集しない）
+	    送るのは操作のイベントのみで、健康情報・個人情報は含めない（FIREBASE_ANALYTICS.md）。
 	  App Store Connect の「App のプライバシー」では、SDK 側のぶんも含めて申告すること。
 	  → Store/store-listing.md の「App のプライバシー」を参照
 	-->
@@ -21,7 +24,7 @@
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
 		<dict>
-			<!-- 目標値・判定基準・リマインダーの設定を端末内に保存するために UserDefaults を使用 -->
+			<!-- 目標値・判定基準・リマインダーの設定と、分析イベントの送信済みフラグ・記録件数を端末内に保存するために UserDefaults を使用（アプリ内でのみ利用） -->
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>
