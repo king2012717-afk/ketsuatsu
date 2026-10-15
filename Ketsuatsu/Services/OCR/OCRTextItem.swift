@@ -9,11 +9,14 @@ struct OCRTextItem: Equatable, Sendable {
     var text: String
     var boundingBox: CGRect
     var confidence: Float
+    /// 2 番目以降の認識候補。7 セグメントの数字は 1 番目の候補が数字にならないことがあるため保持する。
+    var alternatives: [String]
 
-    init(text: String, boundingBox: CGRect, confidence: Float = 1.0) {
+    init(text: String, boundingBox: CGRect, confidence: Float = 1.0, alternatives: [String] = []) {
         self.text = text
         self.boundingBox = boundingBox
         self.confidence = confidence
+        self.alternatives = alternatives
     }
 }
 

@@ -284,6 +284,31 @@ final class BPTextParserTests: XCTestCase {
         XCTAssertEqual(result.diastolic, 62)
     }
 
+    func testPrefersNumericAlternative() {
+        let items = [
+            OCRTextItem(text: "PULSE", boundingBox: .zero, alternatives: ["PU15E"]),
+            OCRTextItem(text: "hu", boundingBox: .zero, alternatives: ["74", "7u"]),
+            OCRTextItem(text: "113", boundingBox: .zero, alternatives: ["118"])
+        ]
+
+        let replaced = BPTextParser.preferringNumericAlternatives(items).map(\.text)
+
+        XCTAssertEqual(replaced, ["PULSE", "74", "113"], "ラベルと、すでに数字として読めている行はそのまま")
+    }
+
+    func testPrintedLabelItems() {
+        let items = [
+            OCRTextItem(text: "SYS", boundingBox: .zero),
+            OCRTextItem(text: "mmHg", boundingBox: .zero),
+            OCRTextItem(text: "PULSE /min.", boundingBox: .zero),
+            OCRTextItem(text: "最高血圧", boundingBox: .zero),
+            OCRTextItem(text: "SYS 128", boundingBox: .zero),
+            OCRTextItem(text: "OMRON M7", boundingBox: .zero)
+        ]
+
+        XCTAssertEqual(BPTextParser.printedLabelItems(in: items).map(\.text), ["SYS", "PULSE /min.", "最高血圧"])
+    }
+
     func testFieldDetection() {
         XCTAssertEqual(BPTextParser.field(for: "SYS"), .systolic)
         XCTAssertEqual(BPTextParser.field(for: "SYSTOLIC"), .systolic)

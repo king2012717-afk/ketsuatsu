@@ -433,6 +433,40 @@ enum BPTextParser {
         return score
     }
 
+    // MARK: - 認識候補
+
+    /// 1 番目の候補に数字として読める語がなく、2 番目以降の候補にはある行を、その候補に置き換える。
+    /// 7 セグメントの「74」が「hu」と読まれるような場合の救済。ラベルの行は置き換えない。
+    static func preferringNumericAlternatives(_ items: [OCRTextItem]) -> [OCRTextItem] {
+        items.map { item in
+            let words = Self.words(in: normalize(item.text))
+            guard !words.contains(where: { field(for: $0) != nil }),
+                  !containsNumber(item.text),
+                  let alternative = item.alternatives.first(where: containsNumber) else { return item }
+            var replaced = item
+            replaced.text = alternative
+            return replaced
+        }
+    }
+
+    private static func containsNumber(_ text: String) -> Bool {
+        words(in: maskDateAndTime(normalize(text))).contains { numericValue(of: $0) != nil && field(for: $0) == nil }
+    }
+
+    // MARK: - 印字ラベル
+
+    /// ラベル（と単位）だけが書かれた行の位置。7 セグメントの読み取りで、液晶の場所を決める手がかりにする。
+    /// 「SYS 128」のように数値を含む行は、位置がずれるので使わない。
+    static func printedLabelItems(in items: [OCRTextItem]) -> [OCRTextItem] {
+        items.filter { item in
+            let words = Self.words(in: normalize(item.text))
+            guard !words.isEmpty, words.contains(where: { field(for: $0) != nil }) else { return false }
+            return words.allSatisfy { word in
+                field(for: word) != nil || unitNoise.contains(word) || labelUnits.contains(word)
+            }
+        }
+    }
+
     // MARK: - テキストの前処理
 
     /// 全角を半角にそろえ、大文字に統一する。
@@ -492,6 +526,8 @@ enum BPTextParser {
     }
 
     private static let unitNoise = ["MMHG", "MM/HG", "MMH", "BPM", "/MIN", "MIN", "HG"]
+    /// ラベルの下に添えられる単位の書き方（「/min.」「拍/分」など）。
+    private static let labelUnits = ["/MIN.", "MIN.", "拍/分", "回/分", "/分"]
 
     /// OCR で誤読しやすい英字を数字に読み替える対応表。
     private static let confusions: [Character: Character] = [
