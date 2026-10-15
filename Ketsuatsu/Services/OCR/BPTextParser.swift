@@ -9,19 +9,24 @@ import CoreGraphics
 /// 3. ラベルだけの行 → 直下・右隣にある数値
 /// 4. 位置と文字サイズによる推定（上から 収縮期 → 拡張期 → 脈拍 の並びが一般的）
 ///
+/// 液晶（7 セグメント）の「1」は縦棒だけで幅が狭く、前後に大きなすき間ができる。
+/// そのため OCR が「131」を「13」「1」に分けたり、先頭の「1」を落として「117」を「17」と
+/// 読んだりする。前者は同じ段の数字をつなぎ直し、後者は条件付きで「1」を補って候補に加える。
+///
 /// Vision に依存しないので、`OCRTextItem` を組み立てれば単体テストできる。
 enum BPTextParser {
 
     // MARK: - 公開 API
 
-    static func parse(_ items: [OCRTextItem]) -> BPParseResult {
+    /// - Parameter aspectRatio: 画像の幅 ÷ 高さ。正規化座標の横と縦の長さを比べるときに使う。
+    static func parse(_ items: [OCRTextItem], aspectRatio: CGFloat = 1) -> BPParseResult {
         let lines = items.enumerated()
             .map { Line(item: $1, lineIndex: $0) }
             .filter { !$0.isIgnored }
         guard !lines.isEmpty else { return .empty }
 
         var context = ParseContext()
-        context.pool = lines.flatMap(\.numbers)
+        context.pool = mergeSplitDigits(lines.flatMap(\.numbers), aspectRatio: aspectRatio)
 
         applySlashPairs(lines, to: &context)
         applyInlineLabels(lines, to: &context)
@@ -52,6 +57,12 @@ enum BPTextParser {
         var value: Int
         var box: CGRect
         var confidence: Float
+        /// 元の数字の並び（「05」のように先頭の 0 も残す）。桁のつなぎ直しと「1」の補完に使う。
+        var digits: String = ""
+        /// 「128/82」の一部など、隣の数字とつなげてはいけないもの。
+        var isMergeable = false
+        /// 先頭の「1」を補った候補かどうか（確度を少し下げるため）。
+        var isLeadingOneRecovered = false
 
         /// 数字の描画サイズ。血圧計は収縮期・拡張期を大きく、脈拍を小さく表示することが多い。
         var height: CGFloat { box.height }
@@ -130,6 +141,11 @@ enum BPTextParser {
                 reasons.append("数値を読み取れませんでした")
             }
 
+            if systolic?.isLeadingOneRecovered == true, systolicValue != nil {
+                confidence *= 0.85
+                reasons.append("収縮期の先頭の「1」を補いました")
+            }
+
             if pulse != nil {
                 confidence = min(1.0, confidence + 0.05)
                 reasons.append(labelledFields.contains(.pulse) ? "脈拍もラベルから取得しました" : "脈拍は位置から推定しました")
@@ -166,8 +182,10 @@ enum BPTextParser {
         var isIgnored = false
 
         init(item: OCRTextItem, lineIndex: Int) {
-            let normalized = BPTextParser.normalize(item.text)
-            guard !BPTextParser.looksLikeDateLine(normalized) else {
+            // 日付・時刻の部分だけを空白にする。脈拍と時刻が同じ段に並ぶ機種（「72 0:00」）があるため、
+            // 行ごと捨てると脈拍まで消えてしまう。
+            let normalized = BPTextParser.maskDateAndTime(BPTextParser.normalize(item.text))
+            guard normalized.contains(where: { !$0.isWhitespace }) else {
                 isIgnored = true
                 return
             }
@@ -200,7 +218,14 @@ enum BPTextParser {
                 }
                 if let value = BPTextParser.numericValue(of: word) {
                     numbers.append(
-                        NumberToken(id: baseID, value: value, box: box, confidence: item.confidence)
+                        NumberToken(
+                            id: baseID,
+                            value: value,
+                            box: box,
+                            confidence: item.confidence,
+                            digits: BPTextParser.digitString(of: word) ?? String(value),
+                            isMergeable: true
+                        )
                     )
                 }
             }
@@ -258,8 +283,18 @@ enum BPTextParser {
 
     private static func applyDetachedLabels(_ lines: [Line], to context: inout ParseContext) {
         let detached = lines.filter { !$0.labels.isEmpty && $0.numbers.isEmpty }.flatMap(\.labels)
+        // SYS／DIA／PULSE が本体に縦に印字されている機種では、数値は「高さがいちばん近いラベル」のもの。
+        // 下の段の脈拍を収縮期と取り違えないよう、ほかのラベルの段にある数値は候補から外す。
+        let isStacked = labelsAreStacked(detached)
         for label in detached where !context.isAssigned(label.field) {
-            let candidates = context.pool.filter { label.field.range.contains($0.value) }
+            // ラベルと同じ段に数字があるなら、その段の数字だけを見る（値が範囲外でもほかの段へは探しに行かない）。
+            // 「117」を「17」と読み落としたときに、下の段の脈拍を収縮期として拾わないため。
+            let sameRow = context.pool.filter { $0.box.minY <= label.box.midY && label.box.midY <= $0.box.maxY }
+            var candidates = (sameRow.isEmpty ? context.pool : sameRow)
+                .filter { label.field.range.contains($0.value) }
+            if isStacked {
+                candidates = candidates.filter { nearestLabel(to: $0, among: detached)?.field == label.field }
+            }
             guard !candidates.isEmpty else { continue }
 
             // ラベルの下 or 右にある数値を優先し、その中で最も近いものを選ぶ。
@@ -277,6 +312,19 @@ enum BPTextParser {
         }
     }
 
+    /// ラベルが別々の段に縦に並んでいるか（同じ行に「SYS DIA」と並ぶ表示とは扱いを分ける）。
+    private static func labelsAreStacked(_ labels: [LabelToken]) -> Bool {
+        guard Set(labels.map(\.field)).count >= 2 else { return false }
+        let centers = labels.map(\.box.midY)
+        let tallest = labels.map(\.box.height).max() ?? 0
+        guard let top = centers.max(), let bottom = centers.min() else { return false }
+        return top - bottom > tallest * 1.5
+    }
+
+    private static func nearestLabel(to token: NumberToken, among labels: [LabelToken]) -> LabelToken? {
+        labels.min { abs($0.box.midY - token.box.midY) < abs($1.box.midY - token.box.midY) }
+    }
+
     // MARK: - ステップ 4: 位置と文字サイズによる推定
 
     /// 脈拍として採用するための最低スコア。無関係な数字を拾いすぎないための下限。
@@ -286,9 +334,10 @@ enum BPTextParser {
         switch (context.systolic, context.diastolic) {
         case (nil, nil):
             var best: (systolic: NumberToken, diastolic: NumberToken, score: Double)?
-            for upper in context.pool {
+            for upper in systolicCandidates(context.pool) {
                 for lower in context.pool where lower.id != upper.id {
-                    guard BPValueRange.isPlausible(systolic: upper.value, diastolic: lower.value) else { continue }
+                    guard BPValueRange.isPlausible(systolic: upper.value, diastolic: lower.value),
+                          haveComparableSize(upper, lower) else { continue }
                     let score = pairScore(systolic: upper, diastolic: lower)
                     if score > (best?.score ?? -.greatestFiniteMagnitude) {
                         best = (upper, lower, score)
@@ -302,13 +351,15 @@ enum BPTextParser {
 
         case (nil, .some(let diastolic)):
             // 拡張期だけ分かっている場合、組み合わせて最もそれらしい数値を収縮期とみなす。
-            let candidate = context.pool
+            let candidate = systolicCandidates(context.pool)
+                .filter { $0.id != diastolic.id && haveComparableSize($0, diastolic) }
                 .filter { BPValueRange.isPlausible(systolic: $0.value, diastolic: diastolic.value) }
                 .max { pairScore(systolic: $0, diastolic: diastolic) < pairScore(systolic: $1, diastolic: diastolic) }
             if let candidate { context.assign(candidate, to: .systolic, viaLabel: false) }
 
         case (.some(let systolic), nil):
             let candidate = context.pool
+                .filter { haveComparableSize(systolic, $0) }
                 .filter { BPValueRange.isPlausible(systolic: systolic.value, diastolic: $0.value) }
                 .max { pairScore(systolic: systolic, diastolic: $0) < pairScore(systolic: systolic, diastolic: $1) }
             if let candidate { context.assign(candidate, to: .diastolic, viaLabel: false) }
@@ -327,9 +378,30 @@ enum BPTextParser {
         }
     }
 
+    /// 収縮期の候補。2 桁の数字は先頭の「1」を落とした可能性があるため（「117」→「17」）、
+    /// 「1」を補った値も加える。補った候補は `pairScore` で減点し、本当に 2 桁の値（98 など）を優先する。
+    private static func systolicCandidates(_ pool: [NumberToken]) -> [NumberToken] {
+        pool + pool.compactMap { token in
+            guard token.isMergeable, token.digits.count == 2, let value = Int("1" + token.digits) else { return nil }
+            var recovered = token
+            recovered.value = value
+            recovered.digits = "1" + token.digits
+            recovered.isLeadingOneRecovered = true
+            return recovered
+        }
+    }
+
+    /// 収縮期と拡張期は同じ大きさの数字で表示される。脈拍は小さい（実機の写真では 0.5〜0.6 倍）。
+    /// 拡張期を読み落としたときに、小さい脈拍の数字と組ませないための条件。
+    private static func haveComparableSize(_ a: NumberToken, _ b: NumberToken) -> Bool {
+        guard a.height > 0, b.height > 0 else { return true }
+        return min(a.height, b.height) / max(a.height, b.height) >= 0.7
+    }
+
     /// 収縮期・拡張期の組み合わせらしさ。
     private static func pairScore(systolic: NumberToken, diastolic: NumberToken) -> Double {
         var score = 0.0
+        if systolic.isLeadingOneRecovered { score -= 1.5 }
 
         // 一般的な血圧計は収縮期を上に表示する。
         if systolic.verticalPosition > diastolic.verticalPosition { score += 3 }
@@ -372,19 +444,43 @@ enum BPTextParser {
             .uppercased()
     }
 
-    /// 日付や時刻の行かどうか。
-    static func looksLikeDateLine(_ normalized: String) -> Bool {
-        if normalized.contains("年") || normalized.contains("月") || normalized.contains("日") { return true }
-        if normalized.contains("AM") || normalized.contains("PM") { return true }
-        // 「7:35」のような時刻表記（「SYS: 128」は時刻ではないので数字同士の並びだけを見る）
-        if normalized.range(of: "\\d{1,2}:\\d{2}", options: .regularExpression) != nil { return true }
-        if normalized.range(of: "(19|20)\\d{2}", options: .regularExpression) != nil { return true }
-        // 「10/25」のように両方が日付として成立する組み合わせ
-        if let match = normalized.range(of: "\\d{1,2}/\\d{1,2}", options: .regularExpression) {
-            let parts = normalized[match].split(separator: "/").compactMap { Int($0) }
-            if parts.count == 2, parts[0] <= 12, parts[1] <= 31 { return true }
+    /// 日付・時刻の部分を同じ文字数の空白に置き換える（語の位置がずれないようにするため）。
+    /// 「128/82」のような血圧の表記は残す。
+    static func maskDateAndTime(_ normalized: String) -> String {
+        let patterns = [
+            "(?<!\\d)(19|20)\\d{2}\\s*[/.\\-年]\\s*\\d{1,2}\\s*[/.\\-月]\\s*\\d{1,2}\\s*日?",
+            "\\d{1,2}\\s*月\\s*\\d{1,2}\\s*日?",
+            "\\d{1,4}\\s*[年月日]",
+            "\\d{1,2}:\\d{2}(:\\d{2})?",
+            "午前|午後|\\bAM\\b|\\bPM\\b",
+            "(?<!\\d)(19|20)\\d{2}(?!\\d)",
+        ]
+        var text = normalized
+        for pattern in patterns {
+            text = blank(pattern, in: text)
         }
-        return false
+        // 「10/25」のように日付として成り立つ組み合わせ
+        return blank("(?<![\\d/])\\d{1,2}/\\d{1,2}(?![\\d/])", in: text) { match in
+            let parts = match.split(separator: "/").compactMap { Int($0) }
+            return parts.count == 2 && (1...12).contains(parts[0]) && (1...31).contains(parts[1])
+        }
+    }
+
+    private static func blank(
+        _ pattern: String,
+        in text: String,
+        where shouldBlank: (Substring) -> Bool = { _ in true }
+    ) -> String {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
+        var result = text
+        let matches = regex.matches(in: text, range: NSRange(text.startIndex..., in: text))
+        for match in matches.reversed() {
+            guard let range = Range(match.range, in: result) else { continue }
+            let matched = result[range]
+            guard shouldBlank(matched) else { continue }
+            result.replaceSubrange(range, with: String(repeating: " ", count: matched.count))
+        }
+        return result
     }
 
     /// 空白と記号で語に分ける（`/` と `.` は数値表記に使われるため残す）。
@@ -406,6 +502,11 @@ enum BPTextParser {
 
     /// 語を数値として解釈する。`128`、`l28`、`128MMHG` などに対応。
     static func numericValue(of word: String) -> Int? {
+        digitString(of: word).flatMap { Int($0) }
+    }
+
+    /// 語を数字の並びとして解釈する。先頭の 0 も残す（`05` → `"05"`）。
+    static func digitString(of word: String) -> String? {
         var cleaned = word
         for noise in unitNoise {
             cleaned = cleaned.replacingOccurrences(of: noise, with: "")
@@ -416,8 +517,8 @@ enum BPTextParser {
         guard cleaned.contains(where: { $0.isNumber }) else { return nil }
 
         let mapped = cleaned.map { confusions[$0] ?? $0 }
-        guard mapped.allSatisfy({ $0.isNumber }) else { return nil }
-        return Int(String(mapped))
+        guard mapped.allSatisfy({ $0.isASCII && $0.isNumber }) else { return nil }
+        return String(mapped)
     }
 
     /// `128/82` のような表記を数値の並びに分解する。
@@ -443,6 +544,53 @@ enum BPTextParser {
             return .diastolic
         }
         return nil
+    }
+
+    // MARK: - 分かれた数字のつなぎ直し
+
+    /// 同じ段で横に並んだ数字の断片をつなぐ（「13」「1」→「131」、「1」「17」→「117」）。
+    /// 7 セグメントの「1」は幅が狭く前後のすき間が大きいため、OCR が別の語に分けてしまう。
+    static func mergeSplitDigits(_ tokens: [NumberToken], aspectRatio: CGFloat) -> [NumberToken] {
+        var result = tokens
+        var didMerge = true
+        while didMerge {
+            didMerge = false
+            search: for i in result.indices {
+                for j in result.indices where i != j {
+                    let left = result[i]
+                    let right = result[j]
+                    guard canMerge(left, right, aspectRatio: aspectRatio),
+                          let value = Int(left.digits + right.digits) else { continue }
+                    var merged = left
+                    merged.value = value
+                    merged.digits = left.digits + right.digits
+                    merged.box = left.box.union(right.box)
+                    merged.confidence = min(left.confidence, right.confidence)
+                    result[i] = merged
+                    result.remove(at: j)
+                    didMerge = true
+                    break search
+                }
+            }
+        }
+        return result
+    }
+
+    private static func canMerge(_ left: NumberToken, _ right: NumberToken, aspectRatio: CGFloat) -> Bool {
+        guard left.isMergeable, right.isMergeable,
+              left.digits.count + right.digits.count <= 3 else { return false }
+        // 「1」だけの断片が絡むときに限る。「128 82」のように別の値が横に並ぶ表示をつなげないため。
+        guard left.digits.allSatisfy({ $0 == "1" }) || right.digits.allSatisfy({ $0 == "1" }) else { return false }
+
+        let taller = max(left.box.height, right.box.height)
+        let shorter = min(left.box.height, right.box.height)
+        guard taller > 0, shorter / taller >= 0.6 else { return false }
+        let overlap = min(left.box.maxY, right.box.maxY) - max(left.box.minY, right.box.minY)
+        guard overlap >= shorter * 0.6 else { return false }
+
+        // 正規化座標は縦横で尺度が違うので、横のすき間を高さと同じ尺度にそろえて比べる。
+        let gap = (right.box.minX - left.box.maxX) * aspectRatio
+        return gap >= -0.2 * taller && gap <= 0.9 * taller
     }
 
     // MARK: - 座標の按分

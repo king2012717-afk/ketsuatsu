@@ -179,12 +179,109 @@ final class BPTextParserTests: XCTestCase {
         XCTAssertNil(BPTextParser.slashSeparatedValues(in: "AB/CD"))
     }
 
-    func testLooksLikeDateLine() {
-        XCTAssertTrue(BPTextParser.looksLikeDateLine("2024/10/25"))
-        XCTAssertTrue(BPTextParser.looksLikeDateLine("07:35"))
-        XCTAssertTrue(BPTextParser.looksLikeDateLine("10月25日"))
-        XCTAssertFalse(BPTextParser.looksLikeDateLine("128/82"), "血圧の表記は日付とみなさない")
-        XCTAssertFalse(BPTextParser.looksLikeDateLine("SYS 128"))
+    func testMasksDateAndTime() {
+        func isBlank(_ text: String) -> Bool { BPTextParser.maskDateAndTime(text).allSatisfy(\.isWhitespace) }
+        XCTAssertTrue(isBlank("2024/10/25"))
+        XCTAssertTrue(isBlank("07:35"))
+        XCTAssertTrue(isBlank("10月25日"))
+        XCTAssertTrue(isBlank("10/25"))
+        XCTAssertEqual(BPTextParser.maskDateAndTime("128/82"), "128/82", "血圧の表記は日付とみなさない")
+        XCTAssertEqual(BPTextParser.maskDateAndTime("SYS 128"), "SYS 128")
+        XCTAssertEqual(BPTextParser.maskDateAndTime("72 0:00"), "72     ", "時刻だけを消し、文字の位置は保つ")
+        XCTAssertEqual(BPTextParser.maskDateAndTime("72BPM"), "72BPM", "BPM の PM を午後と取り違えない")
+    }
+
+    // MARK: - 実機の表示で起きやすいこと
+
+    /// 脈拍と時刻が同じ段に並ぶ機種（Omron M7 など）。行ごと捨てると脈拍が消える。
+    func testKeepsPulseOnSameLineAsClock() {
+        let items = [
+            line("SYS", top: 0.27, height: 0.04, x: 0.02, width: 0.1),
+            line("105", top: 0.22, height: 0.20, x: 0.3, width: 0.4),
+            line("DIA", top: 0.46, height: 0.04, x: 0.02, width: 0.1),
+            line("72", top: 0.44, height: 0.12, x: 0.38, width: 0.2),
+            line("PULSE", top: 0.67, height: 0.04, x: 0.0, width: 0.15),
+            line("74 0:00", top: 0.64, height: 0.08, x: 0.33, width: 0.45)
+        ]
+
+        let result = BPTextParser.parse(items, aspectRatio: 0.75)
+
+        XCTAssertEqual(result.systolic, 105)
+        XCTAssertEqual(result.diastolic, 72)
+        XCTAssertEqual(result.pulse, 74)
+    }
+
+    /// 本体に印字されたラベルが縦に並ぶ表示で、収縮期と拡張期が読めなかった場合。
+    /// 脈拍の段の数値を収縮期として拾ってはいけない。
+    func testStackedLabelsDoNotTakeNumbersFromOtherRows() {
+        let items = [
+            line("SYS", top: 0.27, height: 0.04, x: 0.02, width: 0.1),
+            line("DIA", top: 0.48, height: 0.04, x: 0.02, width: 0.1),
+            line("PULSE", top: 0.71, height: 0.04, x: 0.0, width: 0.15),
+            line("65", top: 0.68, height: 0.12, x: 0.4, width: 0.2)
+        ]
+
+        let result = BPTextParser.parse(items, aspectRatio: 0.75)
+
+        XCTAssertNil(result.systolic)
+        XCTAssertNil(result.diastolic)
+        XCTAssertEqual(result.pulse, 65)
+    }
+
+    /// 7 セグメントの「1」の前後にすき間があり、OCR が「13」「1」に分けた場合。
+    func testMergesDigitsSplitAroundOne() {
+        let items = [
+            line("13", top: 0.20, height: 0.15, x: 0.30, width: 0.20),
+            line("1", top: 0.20, height: 0.15, x: 0.58, width: 0.04),
+            line("88", top: 0.40, height: 0.15, x: 0.40, width: 0.22),
+            line("77", top: 0.60, height: 0.08, x: 0.50, width: 0.12)
+        ]
+
+        let result = BPTextParser.parse(items, aspectRatio: 0.75)
+
+        XCTAssertEqual(result.systolic, 131)
+        XCTAssertEqual(result.diastolic, 88)
+        XCTAssertEqual(result.pulse, 77)
+    }
+
+    /// 別々の値が横に並ぶ表示はつなげない。
+    func testDoesNotMergeSeparateValuesOnSameRow() {
+        let items = [line("128 82", top: 0.30, height: 0.15)]
+
+        let result = BPTextParser.parse(items)
+
+        XCTAssertEqual(result.systolic, 128)
+        XCTAssertEqual(result.diastolic, 82)
+    }
+
+    /// 先頭の「1」が読み落とされて「117」が「17」になった場合。脈拍と組ませず「1」を補う。
+    func testRecoversMissingLeadingOne() {
+        let items = [
+            line("17", top: 0.20, height: 0.18, x: 0.45, width: 0.2),
+            line("81", top: 0.42, height: 0.18, x: 0.40, width: 0.25),
+            line("56", top: 0.68, height: 0.09, x: 0.40, width: 0.15)
+        ]
+
+        let result = BPTextParser.parse(items)
+
+        XCTAssertEqual(result.systolic, 117)
+        XCTAssertEqual(result.diastolic, 81)
+        XCTAssertEqual(result.pulse, 56)
+        XCTAssertTrue(result.explanation.contains("1"), "補ったことを説明に含める")
+    }
+
+    /// 本当に 2 桁の収縮期（低めの血圧）は、そのまま読む。
+    func testKeepsGenuineTwoDigitSystolic() {
+        let items = [
+            line("98", top: 0.20, height: 0.18, x: 0.40, width: 0.25),
+            line("62", top: 0.42, height: 0.18, x: 0.40, width: 0.25),
+            line("70", top: 0.68, height: 0.09, x: 0.40, width: 0.15)
+        ]
+
+        let result = BPTextParser.parse(items)
+
+        XCTAssertEqual(result.systolic, 98)
+        XCTAssertEqual(result.diastolic, 62)
     }
 
     func testFieldDetection() {
