@@ -122,7 +122,7 @@ struct RecordEditView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(maxHeight: 220)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.photoCornerRadius))
             Button(role: .destructive) {
                 draft.photoData = nil
             } label: {

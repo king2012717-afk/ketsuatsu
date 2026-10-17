@@ -14,6 +14,8 @@ struct SettingsView: View {
     @State private var message: AlertMessage?
     @State private var showsDeleteAllConfirmation = false
     @State private var exportedFile: ExportedFile?
+    /// 書き出す前に、健康情報を含むことを知らせる（仕様書 2-19）。
+    @State private var showsExportNotice = false
 
     private struct AlertMessage: Identifiable {
         let id = UUID()
@@ -134,7 +136,13 @@ struct SettingsView: View {
             } message: {
                 Text("\(records.count) 件の記録が削除されます。元に戻すことはできません。")
             }
-            .sheet(item: $exportedFile) { file in
+            .confirmationDialog("CSV で書き出しますか？", isPresented: $showsExportNotice, titleVisibility: .visible) {
+                Button("書き出す") { exportCSV() }
+                Button("キャンセル", role: .cancel) {}
+            } message: {
+                Text(CSVExporter.privacyNotice)
+            }
+            .sheet(item: $exportedFile, onDismiss: CSVExporter.removeTemporaryFiles) { file in
                 ShareSheet(items: [file.url])
             }
         }
@@ -184,7 +192,7 @@ struct SettingsView: View {
             LabeledContent("記録件数", value: "\(records.count) 件")
 
             Button {
-                exportCSV()
+                showsExportNotice = true
             } label: {
                 Label("CSV で書き出す", systemImage: "square.and.arrow.up")
             }

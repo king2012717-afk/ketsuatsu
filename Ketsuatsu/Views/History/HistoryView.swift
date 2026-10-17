@@ -16,6 +16,8 @@ struct HistoryView: View {
     @State private var searchText = ""
     @State private var exportedFile: ExportedFile?
     @State private var exportError: String?
+    /// 書き出す前に、健康情報を含むことを知らせる（仕様書 2-19）。
+    @State private var showsExportNotice = false
 
     private enum SlotFilter: String, CaseIterable, Identifiable {
         case all, morning, noon, evening
@@ -81,7 +83,13 @@ struct HistoryView: View {
         .sheet(item: $editingRecord) { record in
             RecordEditView(mode: .edit(record))
         }
-        .sheet(item: $exportedFile) { file in
+        .confirmationDialog("CSV で書き出しますか？", isPresented: $showsExportNotice, titleVisibility: .visible) {
+            Button("書き出す") { exportCSV() }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text(CSVExporter.privacyNotice)
+        }
+        .sheet(item: $exportedFile, onDismiss: CSVExporter.removeTemporaryFiles) { file in
             ShareSheet(items: [file.url])
         }
         .alert(
@@ -159,7 +167,7 @@ struct HistoryView: View {
             }
             Divider()
             Button {
-                exportCSV()
+                showsExportNotice = true
             } label: {
                 Label("CSV で書き出す", systemImage: "square.and.arrow.up")
             }

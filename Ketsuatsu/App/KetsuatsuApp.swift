@@ -4,6 +4,7 @@ import UserNotifications
 
 @main
 struct KetsuatsuApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var settings = AppSettings()
     @State private var reminders = ReminderStore()
 
@@ -39,11 +40,7 @@ struct KetsuatsuApp: App {
                     // 計測開始時点の基準値を、データを開いた直後に記録する（仕様書 4-7）。
                     RecordService.establishAnalyticsBaseline(context: container.mainContext)
                     await reminders.installDefaultsIfNeeded()
-                    await reminders.refreshAuthorizationStatus()
-                    // 通知が許可済みなら、端末の再起動やアプリ更新に備えて登録し直す。
-                    if reminders.authorizationStatus == .authorized {
-                        await reminders.synchronize()
-                    }
+                    // 通知の登録し直しは、前面に出るたびに RootView が行う（起動時を含む。仕様書 2-18）。
                 }
         }
         .modelContainer(container)

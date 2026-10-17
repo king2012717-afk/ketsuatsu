@@ -53,6 +53,14 @@ enum Theme {
     /// アイコンの角丸に合わせた、やわらかい連続角丸。
     static let cardCornerRadius: CGFloat = 18
     static let controlCornerRadius: CGFloat = 14
+    /// 仕様書 2-3 の共通名。カードと同じ角丸。
+    static let cornerRadius: CGFloat = cardCornerRadius
+    /// 一覧のサムネイル
+    static let thumbnailCornerRadius: CGFloat = 8
+    /// 記録に添付した写真
+    static let photoCornerRadius: CGFloat = 10
+    /// 「写真から記録」で下から出る選択パネル
+    static let panelCornerRadius: CGFloat = 26
 
     static var cardBackground: Color { Color(.secondarySystemGroupedBackground) }
     static var pageBackground: Color { Color(.systemGroupedBackground) }

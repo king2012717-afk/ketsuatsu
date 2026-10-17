@@ -30,6 +30,15 @@ final class CSVExporterTests: XCTestCase {
         XCTAssertTrue(String(lines[2]).contains("128"))
     }
 
+    func testDatesUseGregorianCalendarRegardlessOfDeviceSetting() {
+        let record = BPRecord(measuredAt: date(day: 2, hour: 7), systolic: 128, diastolic: 82)
+
+        let csv = CSVExporter.csv(from: [record], standard: .home)
+
+        XCTAssertTrue(csv.contains("2024/10/02 07:30"), "和暦などの設定でも西暦で書き出す")
+        XCTAssertEqual(CSVExporter.makeDateFormatter(format: "yyyy").calendar.identifier, .gregorian)
+    }
+
     func testPulseIsEmptyWhenMissing() {
         let record = BPRecord(measuredAt: date(day: 1, hour: 7), systolic: 120, diastolic: 78)
         let csv = CSVExporter.csv(from: [record], standard: .home)

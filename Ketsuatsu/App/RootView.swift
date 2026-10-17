@@ -4,6 +4,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(PrivacyConsentManager.self) private var consent
+    @Environment(ReminderStore.self) private var reminders
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var selection: Tab = .home
@@ -30,6 +31,16 @@ struct RootView: View {
         .onChange(of: scenePhase, initial: true) { _, phase in
             guard phase == .active else { return }
             Task { await consent.resumeIfConsented() }
+            // 起動時・前面復帰時に通知を登録し直す（仕様書 2-18）。
+            Task { await reminders.refreshForForeground() }
+        }
+        // タイムゾーンが変わったら通知を登録し直す。
+        .onReceive(NotificationCenter.default.publisher(for: .NSSystemTimeZoneDidChange)) { _ in
+            Task { await reminders.refreshForForeground() }
+        }
+        // 通知をタップしたらホームを開く。
+        .onChange(of: AppNavigation.shared.homeRequest) { _, _ in
+            selection = .home
         }
     }
 

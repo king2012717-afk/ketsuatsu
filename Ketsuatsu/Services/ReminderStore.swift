@@ -69,7 +69,21 @@ final class ReminderStore {
         return granted
     }
 
+    /// このアプリのリマインダーの通知か（通知 ID の接頭辞で見分ける）。
+    nonisolated static func isReminderNotification(identifier: String) -> Bool {
+        identifier.hasPrefix(notificationPrefix)
+    }
+
     // MARK: - 通知スケジュール
+
+    /// アプリが前面に出たとき（起動時・前面復帰時・タイムゾーン変更後）に呼ぶ。
+    /// 許可の状態を取り直し、許可されていれば通知を登録し直す（仕様書 2-18）。
+    /// 端末の再起動やアプリの更新、「設定」App での許可の変更にも追従する。
+    func refreshForForeground() async {
+        await refreshAuthorizationStatus()
+        guard isAuthorized else { return }
+        await synchronize()
+    }
 
     /// 登録済みの通知をすべて作り直す。
     func synchronize() async {

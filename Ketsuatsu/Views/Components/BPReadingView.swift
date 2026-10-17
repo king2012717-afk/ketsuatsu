@@ -107,7 +107,7 @@ struct BPReadingView: View {
         BPReadingView(systolic: nil, diastolic: nil, size: .medium)
         BPReadingView(systolic: 142, diastolic: 91, pulse: 74, style: .onBrand)
             .padding()
-            .background(Theme.brandGradientDiagonal, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(Theme.brandGradientDiagonal, in: RoundedRectangle(cornerRadius: Theme.cardCornerRadius, style: .continuous))
     }
     .padding()
 }

@@ -227,6 +227,37 @@ final class ReminderTests: XCTestCase {
         }
     }
 
+    // MARK: - タイムゾーンと通知 ID（仕様書 2-18）
+
+    /// 通知は「端末の時計で何時何分」で登録する。タイムゾーンや日付を含めないので、
+    /// 旅行などでタイムゾーンが変わっても、その土地の同じ時刻に届く（夏時間の切り替えも同様）。
+    func testTriggersFollowDeviceLocalTime() {
+        let schedules = [
+            makeSchedule(uniform: ReminderPreset.threeTimesDaily.times),
+            makeSchedule(mode: .perWeekday, weekdays: [2: [ReminderTime(hour: 6)], 7: [ReminderTime(hour: 22)]])
+        ]
+        for schedule in schedules {
+            let triggers = ReminderStore.makeRequests(for: schedule).compactMap { $0.trigger as? UNCalendarNotificationTrigger }
+            XCTAssertFalse(triggers.isEmpty)
+            for trigger in triggers {
+                XCTAssertNil(trigger.dateComponents.timeZone, "タイムゾーンを固定しない")
+                XCTAssertNil(trigger.dateComponents.calendar)
+                XCTAssertNil(trigger.dateComponents.year)
+                XCTAssertNil(trigger.dateComponents.month)
+                XCTAssertNil(trigger.dateComponents.day)
+                XCTAssertNotNil(trigger.dateComponents.hour)
+                XCTAssertNotNil(trigger.dateComponents.minute)
+            }
+        }
+    }
+
+    func testIdentifiersUseAppPrefix() {
+        let requests = ReminderStore.makeRequests(for: makeSchedule(uniform: ReminderPreset.threeTimesDaily.times))
+
+        XCTAssertTrue(requests.allSatisfy { ReminderStore.isReminderNotification(identifier: $0.identifier) })
+        XCTAssertFalse(ReminderStore.isReminderNotification(identifier: "other-app.reminder"))
+    }
+
     // MARK: - 表示
 
     func testTimeText() {

@@ -87,7 +87,7 @@ struct PhotoSourceDialog: View {
         .frame(maxWidth: 340)
         .background(
             Theme.cardBackground,
-            in: RoundedRectangle(cornerRadius: 26, style: .continuous)
+            in: RoundedRectangle(cornerRadius: Theme.panelCornerRadius, style: .continuous)
         )
         .shadow(color: .black.opacity(0.25), radius: 30, x: 0, y: 14)
         .padding(.horizontal, 24)

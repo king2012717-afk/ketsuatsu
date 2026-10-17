@@ -139,9 +139,9 @@ struct BatchImportView: View {
                 .resizable()
                 .scaledToFill()
                 .frame(width: 48, height: 48)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Theme.thumbnailCornerRadius, style: .continuous))
         } else {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: Theme.thumbnailCornerRadius, style: .continuous)
                 .fill(Color(.tertiarySystemFill))
                 .frame(width: 48, height: 48)
                 .overlay {
@@ -256,7 +256,7 @@ struct BatchItemEditView: View {
                             .resizable()
                             .scaledToFit()
                             .frame(maxHeight: 200)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.photoCornerRadius, style: .continuous))
                     }
                 }
                 RecordFormSections(draft: $draft, standard: standard, focus: $focus)
