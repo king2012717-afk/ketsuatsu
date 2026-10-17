@@ -20,33 +20,39 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.healthcare-fitness</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
 	<key>LevelPlayAppKey</key>
 	<string>27f76401d</string>
 	<key>LevelPlayBannerAdUnitID</key>
 	<string>c4jqtrjl6hemgp6b</string>
-	<key>SKAdNetworkItems</key>
-	<array>
-		<dict><key>SKAdNetworkIdentifier</key><string>su67r6k2v3.skadnetwork</string></dict>
-		<dict><key>SKAdNetworkIdentifier</key><string>4dzt52r2t5.skadnetwork</string></dict>
-	</array>
-	<key>LSApplicationCategoryType</key>
-	<string>public.app-category.healthcare-fitness</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>血圧計の表示を撮影して、測定結果を自動で読み取るためにカメラを使用します。</string>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>広告をあなたの興味に合わせて表示するために使用します。記録した血圧などの健康情報は使用しません。</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>保存済みの血圧計の写真から測定結果を読み取るために写真へアクセスします。</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>記録に使用した写真を写真ライブラリへ保存するために使用します。</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>ヘルスケアに保存されている血圧・脈拍のデータを取り込んで、このアプリの記録と一緒に表示するために使用します。</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>このアプリで記録した血圧・脈拍をヘルスケアへ書き出すために使用します。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>記録に使用した写真を写真ライブラリへ保存するために使用します。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>保存済みの血圧計の写真から測定結果を読み取るために写真へアクセスします。</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>広告をあなたの興味に合わせて表示するために使用します。記録した血圧などの健康情報は使用しません。</string>
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>su67r6k2v3.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>4dzt52r2t5.skadnetwork</string>
+		</dict>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
