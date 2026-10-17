@@ -1,0 +1,39 @@
+name: iOS build
+
+# 仕様書 2-14。yutaroulabs-spec の templates/ios.yml を元に、XcodeGen を使わないこのアプリ向けにした。
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select newest Xcode
+        # LevelPlay 9.5 以降と Firebase の併用には Xcode 26 以降が必要（仕様書 1-1）。
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          XCODE=$(ls -d /Applications/Xcode_2[6-9]*.app 2>/dev/null | sort -V | tail -1)
+          if [ -n "$XCODE" ]; then sudo xcode-select -s "$XCODE"; fi
+          xcodebuild -version
+      - name: Resolve Swift packages (Unity LevelPlay SDK, Firebase)
+        run: >-
+          xcodebuild -resolvePackageDependencies
+          -project Ketsuatsu.xcodeproj
+          -scheme Ketsuatsu
+      - name: Build app for iOS Simulator
+        # GoogleService-Info.plist はリポジトリに無い（公開リポジトリのため）。無くてもビルドできる。
+        run: >-
+          xcodebuild build
+          -project Ketsuatsu.xcodeproj
+          -scheme Ketsuatsu
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+      - name: Build tests for iOS Simulator
+        run: >-
+          xcodebuild build-for-testing
+          -project Ketsuatsu.xcodeproj
+          -scheme Ketsuatsu
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
