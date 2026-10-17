@@ -2,14 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- 広告のために ATT（トラッキングの確認）を表示するため true（仕様書 2-13）。
-	     ATT を出すアプリは、少なくとも 1 つのデータを「トラッキングに使用」と申告しないと App Store Connect で提出できない
-	     （1.3 の提出時に指摘された）。広告に使う 3 種は、ATT で許可された場合に広告 SDK がトラッキングに使うため true。 -->
+	<!--
+	  アプリ自身のコードはトラッキングをしないので false。トラッキング先のドメイン（NSPrivacyTrackingDomains）は書かない。
+	  - true にすると、ドメインを 1 つ以上書かないと App Store の検証で ITMS-91064（Invalid tracking information）になる
+	    （1.3 (2) で発生）。広告 SDK（LevelPlay／Unity Ads／Ad Quality）のマニフェストも、トラッキング先のドメインを宣言していない
+	  - ATT（トラッキングの確認）は広告 SDK のために出す。App Store Connect の「App のプライバシー」では、
+	    ATT を出すアプリは広告に使うデータを「トラッキングに使用：はい」と答える必要がある（1.3 (1) で指摘）。
+	    こちらは Store/store-listing.md の表のとおり
+	-->
 	<key>NSPrivacyTracking</key>
-	<true/>
-	<!-- トラッキング先のドメインは SDK 側のマニフェストに任せる（仕様書 2-13） -->
-	<key>NSPrivacyTrackingDomains</key>
-	<array/>
+	<false/>
 
 	<!--
 	  血圧・脈拍・メモ・写真などの記録は端末内（と、ユーザーが許可した場合のヘルスケア）にのみ保存し、外部へ送らない。
@@ -27,7 +29,7 @@
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<false/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<true/>
+			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
@@ -40,7 +42,7 @@
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<false/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<true/>
+			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
@@ -52,7 +54,7 @@
 			<key>NSPrivacyCollectedDataTypeLinked</key>
 			<false/>
 			<key>NSPrivacyCollectedDataTypeTracking</key>
-			<true/>
+			<false/>
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>

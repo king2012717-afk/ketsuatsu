@@ -29,7 +29,7 @@ Team は Yutarou Nagano（`JS7SYSHC3S`）、署名は Automatic に設定済み�
 | 最低 iOS | 17.0 | `IPHONEOS_DEPLOYMENT_TARGET` |
 | カテゴリ | 健康＆フィットネス | `LSApplicationCategoryType` |
 | 暗号化の申告 | 使用しない | `ITSAppUsesNonExemptEncryption` |
-| プライバシーマニフェスト | トラッキングあり（ATT を出すため）・収集データ4種（デバイス ID／広告データ／製品の操作／おおよその位置情報）・UserDefaults の理由申告済み（仕様書 2-13） | `Ketsuatsu/PrivacyInfo.xcprivacy` |
+| プライバシーマニフェスト | `NSPrivacyTracking` は false（トラッキング先ドメインのキーなし。ITMS-91064 対策）・収集データ4種（デバイス ID／広告データ／製品の操作／おおよその位置情報）・UserDefaults の理由申告済み。App Store Connect の「トラッキングに使用」は ATT のため「はい」 | `Ketsuatsu/PrivacyInfo.xcprivacy` |
 | アプリアイコン | 通常・ダーク・色合いの 3 種 | `Ketsuatsu/Assets.xcassets/AppIcon.appiconset` |
 
 > **バージョンの上げ方**: App Store Connect に出ている最新版より大きい番号にします。不具合修正や内部の変更は 3 桁目（1.3 → 1.3.1）、目に見える機能追加は 2 桁目（1.3 → 1.4）を上げます。ビルド番号は同じバージョンの中で重ならなければよく、バージョンを上げたら 1 に戻します（仕様書 3-2）。同じバージョンでアップロードし直すときは、ビルド番号を必ず増やしてください。

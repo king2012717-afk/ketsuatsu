@@ -30,7 +30,8 @@ Archive は必ず `main` から作り、そのコミット SHA を記録しま�
 | 1.0 | （未記録） | （未記録） | （未記録） | 公開済み |
 | 1.2 | （未記録） | （未記録） | （未記録） | 配信中（2026年10月17日時点） |
 | 1.3 | 1 | `37c9673` | （未提出） | App Store Connect で「NSUserTrackingUsageDescription があるのにトラッキングの申告がない」と止められた |
-| 1.3 | 2 | （提出時に記入） | （提出時に記入） | プライバシー申告をトラッキングありに直したビルド |
+| 1.3 | 2 | `47b7e62` | 2026-10-17 | ITMS-91064（Invalid tracking information）で差し戻し |
+| 1.3 | 3 | （提出時に記入） | （提出時に記入） | マニフェストを NSPrivacyTracking false・ドメインのキーなしに直したビルド |
 
 ---
 
@@ -39,6 +40,7 @@ Archive は必ず `main` から作り、そのコミット SHA を記録しま�
 | 日付 | Version | 指摘・対応 |
 |---|---|---|
 | 2026-10-17 | 1.3 (1) | 提出前の確認で「アプリに NSUserTrackingUsageDescription が含まれているのに、App のプライバシーでトラッキングに使用するデータがない」と表示された。広告に使う 3 項目（デバイス ID・広告データ・製品の操作）を「トラッキングに使用：はい」に変更し、PrivacyInfo.xcprivacy も合わせた（ビルド 2） |
+| 2026-10-17 | 1.3 (2) | アップロード後、ITMS-91064「NSPrivacyTracking must be true if NSPrivacyTrackingDomains isn't empty」で差し戻し。原因はアプリのマニフェストが `NSPrivacyTracking` true でトラッキング先ドメインが空だったこと（広告 SDK のマニフェストはいずれもドメインを宣言していない）。`NSPrivacyTracking` を false にし、`NSPrivacyTrackingDomains` のキーを削除、各データの Tracking も false に戻した（ビルド 3）。App Store Connect の「トラッキングに使用：はい」はそのまま |
 
 ---
 
