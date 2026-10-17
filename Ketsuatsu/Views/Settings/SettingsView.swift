@@ -5,6 +5,7 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(ReminderStore.self) private var reminders
+    @Environment(PrivacyConsentManager.self) private var consent
     @Environment(\.modelContext) private var modelContext
 
     @Query private var records: [BPRecord]
@@ -86,6 +87,8 @@ struct SettingsView: View {
                 }
 
                 dataSection
+
+                adsSection
 
                 YutarouLabsRecommendedApps(
                     currentAppID: YutarouAppsConfig.currentAppID,
@@ -193,6 +196,24 @@ struct SettingsView: View {
                 Label("すべての記録を削除", systemImage: "trash")
             }
             .disabled(records.isEmpty)
+        }
+    }
+
+    // MARK: - 広告
+
+    @ViewBuilder
+    private var adsSection: some View {
+        if consent.choice != nil {
+            Section {
+                Toggle("興味に合わせた広告を表示する", isOn: Binding(
+                    get: { consent.choice == .personalized },
+                    set: { consent.change(to: $0 ? .personalized : .nonPersonalized) }
+                ))
+            } header: {
+                Text("広告")
+            } footer: {
+                Text("オフにすると、興味に合わせない広告になります。iOS のトラッキングの許可は「設定」App →「プライバシーとセキュリティ」→「トラッキング」で変えられます。記録した健康情報が広告に使われることはありません。")
+            }
         }
     }
 

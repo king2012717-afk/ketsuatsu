@@ -21,9 +21,11 @@ struct KetsuatsuApp: App {
         }
     }()
 
+    @State private var consent = PrivacyConsentManager.shared
+
     init() {
         AnalyticsService.configure()
-        LevelPlayBannerController.shared.start()
+        // 広告 SDK はここでは起動しない。同意と ATT が終わってから PrivacyConsentManager が起動する（仕様書 1-5）。
     }
 
     var body: some Scene {
@@ -31,6 +33,7 @@ struct KetsuatsuApp: App {
             RootView()
                 .environment(settings)
                 .environment(reminders)
+                .environment(consent)
                 .tint(Theme.brand)
                 .task {
                     await reminders.installDefaultsIfNeeded()

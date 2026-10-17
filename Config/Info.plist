@@ -37,6 +37,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>血圧計の表示を撮影して、測定結果を自動で読み取るためにカメラを使用します。</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>広告をあなたの興味に合わせて表示するために使用します。記録した血圧などの健康情報は使用しません。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>保存済みの血圧計の写真から測定結果を読み取るために写真へアクセスします。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
