@@ -28,3 +28,7 @@ fastlane/screenshots/
 # ストア用スクリーンショットの差し替え元（各自のローカルのみ）
 Store/raw/*.png
 Store/_screenshots.html
+
+# Firebase の設定ファイル。公開リポジトリのため含めない（仕様書 2-9）。
+# Firebase コンソールからダウンロードして Ketsuatsu/ に置く。無いときは計測だけが止まる。
+GoogleService-Info.plist

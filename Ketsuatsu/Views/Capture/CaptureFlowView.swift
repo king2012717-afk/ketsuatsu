@@ -77,8 +77,11 @@ struct CaptureFlowView: View {
         case 0:
             dismiss()
         case 1:
+            // 記録の開始は「写真を選び終えた」操作で数える（画面の表示時には送らない。仕様書 4-7）。
+            AppAnalytics.entryStarted(.photo)
             phase = .analyzing(photos[0])
         default:
+            AppAnalytics.entryStarted(.photoBatch)
             phase = .batch(photos)
         }
     }

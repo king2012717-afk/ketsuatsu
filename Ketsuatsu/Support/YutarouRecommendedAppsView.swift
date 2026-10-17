@@ -7,9 +7,8 @@ private final class YutarouRecommendedAppsViewModel: ObservableObject {
     private let currentAppID: String
     private let currentCategory: String
     private var hasLoaded = false
-    /// recommended_app_impression を送ったアプリの ID。
-    /// 設定タブはアプリの起動中ずっと保持されるため、1 起動につきアプリごとに 1 回になる。
-    private var impressionLoggedIDs = Set<String>()
+    /// recommended_app_impression をいつ送るかの記録（半分以上見えたか・前面の間に送ったか）。
+    private var impressions = ImpressionTracker()
 
     init(currentAppID: String, currentCategory: String) {
         self.currentAppID = currentAppID
@@ -26,9 +25,20 @@ private final class YutarouRecommendedAppsViewModel: ObservableObject {
         )
     }
 
-    /// 行が実際に画面に出たときに呼ぶ。まだ送っていないアプリなら true を返し、送信済みとして記録する。
-    func shouldLogImpression(for app: YutarouApp) -> Bool {
-        impressionLoggedIDs.insert(app.id).inserted
+    /// 行の見えている割合が変わったときに呼ぶ。今回送るべきなら true を返す。
+    func shouldLogImpression(for app: YutarouApp, visibleFraction: Double) -> Bool {
+        impressions.update(id: app.id, visibleFraction: visibleFraction)
+    }
+
+    /// アプリが背面に回ったら、表示の回数を数え直す。
+    func didEnterBackground() {
+        impressions.didEnterBackground()
+    }
+
+    /// アプリが前面に戻ったとき、見えている行のうちまだ送っていないアプリを返す。
+    func appsToLogOnBecomingActive() -> [YutarouApp] {
+        let ids = Set(impressions.didBecomeActive())
+        return apps.filter { ids.contains($0.id) }
     }
 }
 
@@ -36,6 +46,7 @@ private final class YutarouRecommendedAppsViewModel: ObservableObject {
 struct YutarouLabsRecommendedApps: View {
     @StateObject private var viewModel: YutarouRecommendedAppsViewModel
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
 
     init(currentAppID: String, currentCategory: String) {
         _viewModel = StateObject(
@@ -72,15 +83,10 @@ struct YutarouLabsRecommendedApps: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityHint("App Storeで開きます")
-                    .onAppear {
-                        // 一覧は遅延表示されるため、行の onAppear が「画面に出た」ことに当たる。
-                        // スクロールや再描画で何度呼ばれても、アプリごとに 1 回だけ送る。
-                        guard viewModel.shouldLogImpression(for: app) else { return }
-                        AnalyticsService.recommendedAppImpression(
-                            destinationApp: app.id,
-                            placement: "settings_recommendations",
-                            campaign: "yutaroulabs_cross_promo"
-                        )
+                    .onVisibleFractionChange { fraction in
+                        // 行の半分以上が画面に入ったときだけ、前面にいる間アプリごとに 1 回送る（仕様書 4-8）。
+                        guard viewModel.shouldLogImpression(for: app, visibleFraction: fraction) else { return }
+                        logImpression(of: app)
                     }
                 }
             }
@@ -92,6 +98,24 @@ struct YutarouLabsRecommendedApps: View {
         .task {
             await viewModel.load()
         }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background:
+                viewModel.didEnterBackground()
+            case .active:
+                viewModel.appsToLogOnBecomingActive().forEach(logImpression)
+            default:
+                break
+            }
+        }
+    }
+
+    private func logImpression(of app: YutarouApp) {
+        AnalyticsService.recommendedAppImpression(
+            destinationApp: app.id,
+            placement: "settings_recommendations",
+            campaign: "yutaroulabs_cross_promo"
+        )
     }
 
     private func recommendationRow(for app: YutarouApp) -> some View {

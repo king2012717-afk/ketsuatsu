@@ -19,7 +19,7 @@ enum RecordService {
     static func create(from draft: BPDraft, context: ModelContext, settings: AppSettings) async -> BPRecord? {
         guard let result = await insert(draft, context: context, settings: settings) else { return nil }
         if result.persisted {
-            logEntryCompleted(method: draft.source.rawValue, persistedCount: 1)
+            logEntryCompleted(method: draft.source == .photo ? .photo : .manual, persistedCount: 1)
         }
         return result.record
     }
@@ -35,7 +35,7 @@ enum RecordService {
             }
         }
         if persistedCount > 0 {
-            logEntryCompleted(method: AnalyticsService.EntryMethod.photoBatch, persistedCount: persistedCount)
+            logEntryCompleted(method: .photoBatch, persistedCount: persistedCount)
         }
         return persistedCount
     }
@@ -49,10 +49,8 @@ enum RecordService {
     ) async -> (record: BPRecord, persisted: Bool)? {
         guard let systolic = draft.systolic, let diastolic = draft.diastolic else { return nil }
 
-        // 3 件目の判定に使う件数を、この記録を加える前の状態から引き継ぐ（初回のみ）。
-        EntryMilestoneTracker().migrateIfNeeded {
-            existingEntryCount(context: context)
-        }
+        // 起動時に引き継ぎ済みのはずだが、まだなら、この記録を加える前の状態から引き継ぐ。
+        establishAnalyticsBaseline(context: context)
 
         let record = BPRecord(
             measuredAt: draft.measuredAt,
@@ -83,6 +81,17 @@ enum RecordService {
         return (record, persisted)
     }
 
+    /// 計測開始時点の基準値（既存の記録件数）を一度だけ記録する。起動してデータを開いた直後に呼ぶ（仕様書 4-7）。
+    /// 3 件目の判定の引き継ぎと、ユーザープロパティ `had_data_at_start` の設定を兼ねる。
+    static func establishAnalyticsBaseline(context: ModelContext) {
+        let migrated = EntryMilestoneTracker().migrateIfNeeded {
+            existingEntryCount(context: context)
+        }
+        if let existing = migrated {
+            AppAnalytics.setHadDataAtStart(existing > 0)
+        }
+    }
+
     /// ヘルスケアから取り込んだものを除いた、保存済みの記録件数。
     private static func existingEntryCount(context: ModelContext) -> Int {
         let healthKitRaw = RecordSource.healthKit.rawValue
@@ -94,16 +103,10 @@ enum RecordService {
 
     /// 保存に成功した記録について、完了イベントと 3 件目の到達イベントを送る。
     /// 送るのは記録方法と件数だけで、血圧値・脈拍・メモなどの内容は含めない。
-    private static func logEntryCompleted(method: String, persistedCount: Int) {
-        var parameters: [String: Any] = ["entry_method": method]
-        if method == AnalyticsService.EntryMethod.photoBatch {
-            parameters["record_count"] = persistedCount
-        }
-        AnalyticsService.log("blood_pressure_entry_completed", parameters: parameters)
-        AnalyticsService.mainActionCompleted(action: "blood_pressure_entry")
-
+    private static func logEntryCompleted(method: AppAnalytics.EntryMethod, persistedCount: Int) {
+        AppAnalytics.entryCompleted(method, recordCount: persistedCount)
         if EntryMilestoneTracker().addCompletedEntries(persistedCount) {
-            AnalyticsService.log("third_entry_completed")
+            AppAnalytics.thirdEntryCompleted()
         }
     }
 

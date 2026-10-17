@@ -64,6 +64,10 @@ File → Packages → Resolve Package Versions を実行してください。
 
 イベントの一覧・送るタイミング・重複の防ぎ方・DebugView での確認手順は、リポジトリ直下の `FIREBASE_ANALYTICS.md` にまとめています。
 
+> **`GoogleService-Info.plist` は Git に含めていません**（公開リポジトリのため。仕様書 2-9）。
+> Firebase コンソール → プロジェクト `YutarouLabs Apps` → このアプリ → `GoogleService-Info.plist` をダウンロードし、`Ketsuatsu/` に置いてください。
+> 置かなくてもビルド・起動はできますが、計測は止まります。
+
 #### ★ 1.0.1 の提出前に必要な作業
 
 1. **バンドル ID の一致確認**: App Store Connect に登録済みの本番バンドル ID と、プロジェクトの `PRODUCT_BUNDLE_IDENTIFIER`、`Ketsuatsu/GoogleService-Info.plist` の `BUNDLE_ID`（現在はいずれも `com.example.Ketsuatsu`）が同じか確認する。

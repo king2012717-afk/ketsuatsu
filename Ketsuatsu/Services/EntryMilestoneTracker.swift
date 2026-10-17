@@ -28,13 +28,16 @@ struct EntryMilestoneTracker {
     var completedEntries: Int { defaults.integer(forKey: Key.completedEntries) }
     var isThirdEntrySent: Bool { defaults.bool(forKey: Key.thirdEntrySent) }
 
-    /// この仕組みを入れる前から使っている端末向けに、1 回だけ既存の記録件数を引き継ぐ。
+    /// この仕組みを入れる前から使っている端末向けに、1 回だけ既存の記録件数を引き継ぐ（計測開始時点の基準値）。
+    /// 起動してデータを開いた直後に呼ぶ。保存の直前にも念のため呼ぶ（引き継ぎ済みなら何もしない）。
     /// すでに 3 件以上ある場合は「到達済み」とし、イベントは送らない（4 件目以降の誤発火を防ぐ）。
     ///
     /// - Parameter existingEntryCount: ヘルスケアからの取り込みを除いた、保存済みの記録件数。
     ///   移行が済んでいる場合は呼ばれない。
-    func migrateIfNeeded(existingEntryCount: () -> Int) {
-        guard !defaults.bool(forKey: Key.migrated) else { return }
+    /// - Returns: 今回引き継いだ場合は、その時点の既存件数。すでに引き継ぎ済みなら nil。
+    @discardableResult
+    func migrateIfNeeded(existingEntryCount: () -> Int) -> Int? {
+        guard !defaults.bool(forKey: Key.migrated) else { return nil }
         let existing = max(existingEntryCount(), 0)
         if existing > completedEntries {
             defaults.set(existing, forKey: Key.completedEntries)
@@ -43,6 +46,7 @@ struct EntryMilestoneTracker {
             defaults.set(true, forKey: Key.thirdEntrySent)
         }
         defaults.set(true, forKey: Key.migrated)
+        return existing
     }
 
     /// 保存に成功した件数を加え、今回の呼び出しで初めて 3 件目に到達した場合だけ true を返す。

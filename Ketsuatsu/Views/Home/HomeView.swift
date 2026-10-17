@@ -160,6 +160,7 @@ struct HomeView: View {
             .buttonStyle(.brand)
 
             Button {
+                AppAnalytics.entryStarted(.manual)
                 route = .manual
             } label: {
                 VStack(spacing: 6) {

@@ -53,6 +53,7 @@ struct AddRecordMenu<LabelContent: View>: View {
                 Label("写真から読み取る（複数可）", systemImage: "photo.on.rectangle")
             }
             Button {
+                AppAnalytics.entryStarted(.manual)
                 route = .manual
             } label: {
                 Label("手で入力する", systemImage: "square.and.pencil")

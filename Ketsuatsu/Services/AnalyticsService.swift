@@ -2,14 +2,41 @@ import FirebaseAnalytics
 import FirebaseCore
 import Foundation
 
-/// YutarouLabs 共通の Firebase Analytics 薄いラッパー。
-/// イベント名と共通パラメータをここへ集約し、各アプリへ横展開しやすくする。
+/// YutarouLabs 共通の Firebase Analytics 薄いラッパー（仕様書 4-7）。
+/// 起動と送信、共通イベント（main_action_complete・おすすめアプリ）だけを持つ。
+/// このアプリ固有のイベントは `AppAnalytics` に置く。
 enum AnalyticsService {
-    static let sourceApp = "ketsuatsu"
+    /// おすすめアプリの `source_app`。apps.json の ID と同じ値にする（仕様書 4-8）。
+    static let sourceApp = YutarouAppsConfig.currentAppID
 
+    /// Firebase を起動する。`GoogleService-Info.plist` が無い、または Bundle ID が違うときは起動せず、
+    /// 計測だけを止める（ビルドも起動もできる。仕様書 4-7）。
     static func configure() {
         guard FirebaseApp.app() == nil else { return }
-        FirebaseApp.configure()
+        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+              let options = FirebaseOptions(contentsOfFile: path) else {
+            debugLog("GoogleService-Info.plist が見つからないため、計測を止めます")
+            return
+        }
+        // 他アプリの plist を流用していると、別アプリの計測に混ざってしまう。
+        guard options.bundleID == Bundle.main.bundleIdentifier else {
+            debugLog("GoogleService-Info.plist の BUNDLE_ID（\(options.bundleID)）がアプリ（\(Bundle.main.bundleIdentifier ?? "-")）と違うため、計測を止めます")
+            return
+        }
+        FirebaseApp.configure(options: options)
+        // 起動のたびに決め直す（設定は端末に残るため）。
+        Analytics.setAnalyticsCollectionEnabled(isCollectionEnabled)
+        debugLog(isCollectionEnabled ? "送信します" : "Debug ビルドのため送信しません（スキームの -FIRDebugEnabled で有効）")
+    }
+
+    /// Release は常に送る。Debug はスキームの起動引数 `-FIRDebugEnabled` を付けたときだけ送る。
+    /// 開発中の操作が本番の数字に混ざらないようにするため。
+    static var isCollectionEnabled: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-FIRDebugEnabled")
+        #else
+        return true
+        #endif
     }
 
     static func log(_ name: String, parameters: [String: Any] = [:]) {
@@ -17,14 +44,15 @@ enum AnalyticsService {
         Analytics.logEvent(name, parameters: parameters)
     }
 
-    /// blood_pressure_entry_started / _completed の entry_method に入れる値。
-    enum EntryMethod {
-        /// 手入力（RecordSource.manual と同じ値）
-        static let manual = "manual"
-        /// 写真 1 枚から読み取り（RecordSource.photo と同じ値）
-        static let photo = "photo"
-        /// 写真をまとめて読み取り
-        static let photoBatch = "photo_batch"
+    static func setUserProperty(_ value: String, forName name: String) {
+        guard FirebaseApp.app() != nil else { return }
+        Analytics.setUserProperty(value, forName: name)
+    }
+
+    private static func debugLog(_ message: String) {
+        #if DEBUG
+        print("[Analytics] \(message)")
+        #endif
     }
 
     // onboarding_complete は送らない。

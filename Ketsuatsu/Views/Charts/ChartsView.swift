@@ -135,18 +135,12 @@ struct ChartsView: View {
             .background(Theme.pageBackground)
             .navigationTitle("グラフ")
         }
-        // weekly_summary_viewed: 「1週間」の集計が画面に出たときに 1 回送る。
-        // - グラフタブを開いたとき、すでに「1週間」が選ばれていれば送る（タブの再訪も 1 回と数える）
-        // - 別の期間から「1週間」へ切り替えたときに送る
-        // 再描画や記録の追加では送らない。期間内の件数などの内容は送らない。
-        .onAppear {
-            if period.filter == .week1 {
-                AnalyticsService.log("weekly_summary_viewed")
-            }
-        }
+        // weekly_summary_viewed: 期間のチップで、ほかの期間から「1週間」へ切り替えたときに 1 回送る。
+        // 期間はチップの操作でしか変わらない。画面の表示・タブの再訪・再描画では送らない（仕様書 4-7）。
+        // 期間内の件数などの内容は送らない。
         .onChange(of: period.filter) { oldValue, newValue in
             if newValue == .week1, oldValue != .week1 {
-                AnalyticsService.log("weekly_summary_viewed")
+                AppAnalytics.weeklySummaryViewed()
             }
         }
     }

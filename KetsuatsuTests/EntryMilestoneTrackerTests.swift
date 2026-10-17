@@ -78,6 +78,13 @@ final class EntryMilestoneTrackerTests: XCTestCase {
         XCTAssertFalse(tracker.addCompletedEntries())
     }
 
+    func testMigrationReturnsBaselineOnlyTheFirstTime() {
+        let tracker = makeTracker()
+
+        XCTAssertEqual(tracker.migrateIfNeeded { 4 }, 4, "had_data_at_start の判定に使う")
+        XCTAssertNil(tracker.migrateIfNeeded { 9 })
+    }
+
     func testMigrationRunsOnlyOnce() {
         let tracker = makeTracker()
         tracker.migrateIfNeeded { 1 }

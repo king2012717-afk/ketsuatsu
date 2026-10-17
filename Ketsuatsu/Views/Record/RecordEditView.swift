@@ -22,8 +22,6 @@ struct RecordEditView: View {
     @FocusState private var focus: RecordFormSections.Field?
     @State private var showsRecognizedText = false
     @State private var isSaving = false
-    /// blood_pressure_entry_started を、この画面を開いた 1 回につき 1 回だけ送るための印。
-    @State private var hasLoggedEntryStart = false
 
     init(mode: Mode, ocrResult: BPParseResult? = nil, recognizedLines: [String] = []) {
         self.mode = mode
@@ -73,15 +71,6 @@ struct RecordEditView: View {
             }
         }
         .interactiveDismissDisabled(isSaving)
-        .onAppear {
-            // 新規作成のときだけ送る（編集は記録の開始に当たらない）。
-            // onAppear は再表示で複数回呼ばれうるため、画面ごとに 1 回に絞る。
-            guard !isEditing, !hasLoggedEntryStart else { return }
-            hasLoggedEntryStart = true
-            AnalyticsService.log("blood_pressure_entry_started", parameters: [
-                "entry_method": draft.source.rawValue,
-            ])
-        }
     }
 
     private var isEditing: Bool {
