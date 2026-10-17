@@ -23,16 +23,16 @@ Team は Yutarou Nagano（`JS7SYSHC3S`）、署名は Automatic に設定済み�
 | 項目 | 値 | 場所 |
 | --- | --- | --- |
 | 表示名 | うちの血圧記録 | `Config/Info.plist` |
-| バージョン | 1.0.1（Firebase Analytics 導入の更新） | `MARKETING_VERSION` |
-| ビルド番号 | 2 | `CURRENT_PROJECT_VERSION` |
+| バージョン | 1.3（配信中の 1.2 の次。同意画面と ATT、写真読み取りの改善、アクセス解析） | `MARKETING_VERSION` |
+| ビルド番号 | 1（バージョンを上げたので 1 から。仕様書 3-2） | `CURRENT_PROJECT_VERSION` |
 | 対応端末 | iPhone のみ | `TARGETED_DEVICE_FAMILY = 1` |
 | 最低 iOS | 17.0 | `IPHONEOS_DEPLOYMENT_TARGET` |
 | カテゴリ | 健康＆フィットネス | `LSApplicationCategoryType` |
 | 暗号化の申告 | 使用しない | `ITSAppUsesNonExemptEncryption` |
-| プライバシーマニフェスト | アプリ自身の収集なし（SDK 分は各 SDK のマニフェスト）・UserDefaults の理由申告済み | `Ketsuatsu/PrivacyInfo.xcprivacy` |
+| プライバシーマニフェスト | トラッキングあり（ATT を出すため）・収集データ4種（デバイス ID／広告データ／製品の操作／おおよその位置情報）・UserDefaults の理由申告済み（仕様書 2-13） | `Ketsuatsu/PrivacyInfo.xcprivacy` |
 | アプリアイコン | 通常・ダーク・色合いの 3 種 | `Ketsuatsu/Assets.xcassets/AppIcon.appiconset` |
 
-> **バージョンの上げ方**: App Store Connect に出ている最新版より大きい番号にします。不具合修正や内部の変更は 3 桁目（1.0.1 → 1.0.2）、目に見える機能追加は 2 桁目（1.0 → 1.1）を上げ、ビルド番号はアップロードのたびに 1 ずつ増やします。同じバージョンでビルドを上げ直す場合も、ビルド番号は必ず増やしてください。
+> **バージョンの上げ方**: App Store Connect に出ている最新版より大きい番号にします。不具合修正や内部の変更は 3 桁目（1.3 → 1.3.1）、目に見える機能追加は 2 桁目（1.3 → 1.4）を上げます。ビルド番号は同じバージョンの中で重ならなければよく、バージョンを上げたら 1 に戻します（仕様書 3-2）。同じバージョンでアップロードし直すときは、ビルド番号を必ず増やしてください。
 
 > iPad にも対応させたい場合は `TARGETED_DEVICE_FAMILY` を `"1,2"` に戻してください。ただし iPad 用のスクリーンショットと動作確認が別途必要になります。
 
@@ -68,7 +68,7 @@ File → Packages → Resolve Package Versions を実行してください。
 > Firebase コンソール → プロジェクト `YutarouLabs Apps` → このアプリ → `GoogleService-Info.plist` をダウンロードし、`Ketsuatsu/` に置いてください。
 > 置かなくてもビルド・起動はできますが、計測は止まります。
 
-#### ★ 1.0.1 の提出前に必要な作業
+#### ★ 1.3 の提出前に必要な作業
 
 1. **バンドル ID の一致確認**: App Store Connect に登録済みの本番バンドル ID と、プロジェクトの `PRODUCT_BUNDLE_IDENTIFIER`、`Ketsuatsu/GoogleService-Info.plist` の `BUNDLE_ID`（現在はいずれも `com.example.Ketsuatsu`）が同じか確認する。
    本番が違う値の場合は、**アプリのバンドル ID は変えず**、Firebase コンソールで本番のバンドル ID の iOS アプリを追加して、その `GoogleService-Info.plist` に差し替える。
