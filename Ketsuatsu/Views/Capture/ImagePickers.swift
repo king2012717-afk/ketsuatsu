@@ -26,7 +26,7 @@ struct CameraPicker: UIViewControllerRepresentable {
         controller.allowsEditing = true
         controller.delegate = context.coordinator
 
-        // 撮影のコツを画面の上部に常に出しておく。検出による警告ではないので、出過ぎて撮れなくなることはない。
+        // 撮影の目安の枠とコツを常に出しておく。検出による警告ではないので、出過ぎて撮れなくなることはない。
         let hint = CameraHintOverlayView(frame: Self.screenBounds)
         controller.cameraOverlayView = hint
         context.coordinator.observeCaptureSession(hint: hint)
@@ -60,7 +60,7 @@ struct CameraPicker: UIViewControllerRepresentable {
         }
 
         /// 撮影すると、撮った写真の確認（移動と拡大縮小）の画面に変わり、カメラの映像が止まる。
-        /// そのあいだは注意書きを隠し、「再撮影」で映像が戻ったら再び出す。
+        /// そのあいだは枠と注意書きを隠し、「再撮影」で映像が戻ったら再び出す。
         func observeCaptureSession(hint: UIView) {
             let center = NotificationCenter.default
             sessionObservers = [
@@ -91,10 +91,25 @@ struct CameraPicker: UIViewControllerRepresentable {
     }
 }
 
-/// カメラの画面の上部に出す、撮影のコツ。
-/// 触っても下のカメラの操作（シャッター・フラッシュなど）の邪魔にならないよう、タップは受け取らない。
+/// カメラの画面に重ねる、撮影の目安の枠と一言。
+///
+/// - 枠：撮った写真は確認画面で正方形に切り取られ、その正方形が読み取りに使われる（`allowsEditing`）。
+///   正方形はカメラの映像（縦長 3:4）の中央にあるので、その内側に一回り小さい枠を出し、
+///   血圧計の表示部分と「最高・最低・脈拍」などの文字を大きく収めてもらう（遠くて小さいと読み取りにくい）。
+/// - 一言：反射やぼやけを検出して警告するのではなく、常に同じ内容を出す（出過ぎて撮れなくなるのを避ける）。
+/// - 触っても下のカメラの操作（シャッター・フラッシュなど）の邪魔にならないよう、タップは受け取らない。
 final class CameraHintOverlayView: UIView {
-    static let message = "反射が入らないよう、少し斜めから撮ると読み取りやすくなります。\n「最高・最低・脈拍」や「SYS・DIA」の文字も一緒に写してください。"
+    static let message = "数字と「最高・最低・脈拍」の文字を枠に収めてください。\n反射が入るときは、少し斜めから撮ると読み取りやすくなります。"
+
+    /// 標準のカメラ画面で、上端のフラッシュなどのボタンが並ぶ列の高さ（この下からカメラの映像が始まる）。
+    private static let topControlsHeight: CGFloat = 44
+    /// 切り取られる正方形（映像の幅いっぱい）に対する、目安の枠の大きさ。
+    private static let guideScale: CGFloat = 0.8
+
+    private let guideShadow = CAShapeLayer()
+    private let guideLine = CAShapeLayer()
+    private let label = UILabel()
+    private let background = UIView()
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -102,39 +117,58 @@ final class CameraHintOverlayView: UIView {
         isUserInteractionEnabled = false
         backgroundColor = .clear
 
-        let label = UILabel()
+        // 明るい背景でも暗い背景でも見えるよう、黒い縁取りの上に白い線を重ねる。
+        for (shape, color, width) in [(guideShadow, UIColor.black.withAlphaComponent(0.35), CGFloat(5)),
+                                      (guideLine, UIColor.white.withAlphaComponent(0.9), CGFloat(2))] {
+            shape.fillColor = UIColor.clear.cgColor
+            shape.strokeColor = color.cgColor
+            shape.lineWidth = width
+            layer.addSublayer(shape)
+        }
+
         label.text = Self.message
         label.numberOfLines = 0
         label.textAlignment = .center
         label.font = .preferredFont(forTextStyle: .footnote)
         label.adjustsFontForContentSizeCategory = true
         label.textColor = .white
-        label.translatesAutoresizingMaskIntoConstraints = false
 
-        let background = UIView()
         background.backgroundColor = UIColor.black.withAlphaComponent(0.55)
         background.layer.cornerRadius = Theme.controlCornerRadius
         background.layer.cornerCurve = .continuous
-        background.translatesAutoresizingMaskIntoConstraints = false
         background.addSubview(label)
         addSubview(background)
-
-        NSLayoutConstraint.activate([
-            // 上端のフラッシュなどのボタンの列を避けて、その下に置く。
-            background.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 64),
-            background.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
-            background.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
-            label.topAnchor.constraint(equalTo: background.topAnchor, constant: 8),
-            label.bottomAnchor.constraint(equalTo: background.bottomAnchor, constant: -8),
-            label.leadingAnchor.constraint(equalTo: background.leadingAnchor, constant: 12),
-            label.trailingAnchor.constraint(equalTo: background.trailingAnchor, constant: -12),
-        ])
         isAccessibilityElement = true
         accessibilityLabel = Self.message
     }
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) は使わない")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let guide = Self.guideRect(in: bounds, safeAreaTop: safeAreaInsets.top)
+        let path = UIBezierPath(roundedRect: guide, cornerRadius: Theme.cardCornerRadius).cgPath
+        for shape in [guideShadow, guideLine] {
+            shape.frame = bounds
+            shape.path = path
+        }
+
+        // 一言は枠のすぐ下（カメラの映像の中）に置く。上端のボタンの列やシャッターと重ならないようにするため。
+        let width = bounds.width - 32
+        let fitting = label.sizeThatFits(CGSize(width: width - 24, height: .greatestFiniteMagnitude))
+        background.frame = CGRect(x: 16, y: guide.maxY + 12, width: width, height: ceil(fitting.height) + 16)
+        label.frame = background.bounds.insetBy(dx: 12, dy: 8)
+    }
+
+    /// 目安の枠の位置。カメラの映像（幅いっぱい・縦長 3:4）の中央に、幅の 8 割の正方形を置く。
+    static func guideRect(in bounds: CGRect, safeAreaTop: CGFloat) -> CGRect {
+        let previewWidth = bounds.width
+        let previewHeight = previewWidth * 4 / 3
+        let centerY = safeAreaTop + topControlsHeight + previewHeight / 2
+        let side = previewWidth * guideScale
+        return CGRect(x: (bounds.width - side) / 2, y: centerY - side / 2, width: side, height: side)
     }
 }
 
