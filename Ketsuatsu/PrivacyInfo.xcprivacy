@@ -2,29 +2,82 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- トラッキングは行わない -->
+	<!-- 広告のために ATT（トラッキングの確認）を表示するため true（仕様書 2-13） -->
 	<key>NSPrivacyTracking</key>
-	<false/>
+	<true/>
+	<!-- トラッキング先のドメインは SDK 側のマニフェストに任せる（仕様書 2-13） -->
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 
 	<!--
 	  血圧・脈拍・メモ・写真などの記録は端末内（と、ユーザーが許可した場合のヘルスケア）にのみ保存し、外部へ送らない。
-	  外部へ送られるのは次の SDK が扱うデータで、それぞれの SDK のプライバシーマニフェストで宣言される。
-	  - 広告: Unity LevelPlay（Unity Ads アダプタを含む）
-	  - アクセス解析: Firebase Analytics（FirebaseAnalyticsCore。IDFA は収集しない）
+	  以下は SDK が扱う情報。LevelPlay 9.6.0 の SDK マニフェストは収集データを宣言していないため、アプリ側で宣言する。
+	  - 広告: Unity LevelPlay（ironSource Ads／Unity Ads）… 目的「サードパーティ広告」
+	  - アクセス解析: Firebase Analytics（FirebaseAnalyticsCore。IDFA は扱わない）… 目的「アナリティクス」
 	    送るのは操作のイベントのみで、健康情報・個人情報は含めない（FIREBASE_ANALYTICS.md）。
-	  App Store Connect の「App のプライバシー」では、SDK 側のぶんも含めて申告すること。
-	  → Store/store-listing.md の「App のプライバシー」を参照
+	  App Store Connect の「App のプライバシー」も同じ内容で回答する（Store/store-listing.md）。
 	-->
 	<key>NSPrivacyCollectedDataTypes</key>
-	<array/>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeAdvertisingData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeThirdPartyAdvertising</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- Firebase Analytics が IP アドレスから国・地域を推定する -->
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCoarseLocation</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+	</array>
 
 	<!-- 利用理由の申告が必要な API -->
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
 		<dict>
-			<!-- 目標値・判定基準・リマインダーの設定と、分析イベントの送信済みフラグ・記録件数を端末内に保存するために UserDefaults を使用（アプリ内でのみ利用） -->
+			<!-- 目標値・判定基準・リマインダー・広告の同意の設定と、分析イベントの送信済みフラグ・記録件数を
+			     端末内に保存するために UserDefaults を使用（アプリ内でのみ利用） -->
 			<key>NSPrivacyAccessedAPIType</key>
 			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
 			<key>NSPrivacyAccessedAPITypeReasons</key>

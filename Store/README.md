@@ -2,21 +2,21 @@
 
 上から順に進めてください。**★ が付いている項目は、こちらでは代われないので必ず作業が必要です。**
 
+YutarouLabs 共通の提出前チェックリストは `docs/YutarouLabs-アプリ開発仕様書.md` の Part 6 です。このファイルは、そのうち本アプリ固有の手順をまとめたものです。
+
 ## 1. Xcode 側の設定
 
-### ★ 1-1. Bundle ID を自分のものに変える
+### ★ 1-1. Bundle ID の確認
 
-現在は `com.example.Ketsuatsu` という仮の値です。このままでは提出できません。
+リポジトリ上の値は `com.example.Ketsuatsu` です。App Store Connect に登録済みの本番の値と一致しているか確認してください。
 
-1. [Apple Developer](https://developer.apple.com/account/resources/identifiers/list) で Identifier を登録
-   （例: `jp.あなたのドメイン.ketsuatsu`。持っているドメインを逆順にするのが慣例です）
-2. Capability に **HealthKit** を追加
-3. Xcode → プロジェクト → TARGETS「Ketsuatsu」→ Signing & Capabilities → Bundle Identifier を登録した値に変更
+- **登録済みの Bundle ID は変更しない**（仕様書 2-8）。署名エラーを避けるために変えることもしない
+- 手元の Xcode でだけ本番の値に書き換えている場合は、その値をコミットして、`main` から同じ Archive を作れるようにする（仕様書 2-17）
+- Capability に **HealthKit** が付いていることを確認する
 
-### ★ 1-2. 署名（Signing）
+### 1-2. 署名（Signing）
 
-同じ画面で **Team** に自分の Apple Developer アカウントを選びます。
-「Automatically manage signing」を有効にしておけば、プロビジョニングは自動で作られます。
+Team は Yutarou Nagano（`JS7SYSHC3S`）、署名は Automatic に設定済みです（仕様書 2-8）。
 
 ### 1-3. 設定済みの項目（変更不要）
 
@@ -38,16 +38,18 @@
 
 ### 1-4. 広告（Unity LevelPlay）について
 
-画面上部にバナー広告を表示します。設定は `Ketsuatsu/Services/Ads/AdConfiguration.swift` にまとめています。
+画面上部にバナー広告を表示します。初回起動時に同意画面と ATT を表示し、終わってから広告 SDK を起動します（仕様書 1-5）。
 
 | 項目 | 値 |
 | --- | --- |
-| アプリ ID | `[旧広告ID削除済み]`（`Info.plist` の `LevelPlayAppKey`） |
-| バナー広告ユニット（本番） | `[旧広告ID削除済み]` |
-| バナー広告ユニット（開発中） | Google のテスト用 ID |
-| SDK | Google Mobile Ads（Swift Package・12.x） |
+| App Key | `Info.plist` の `LevelPlayAppKey` |
+| バナーの広告ユニット ID | `Info.plist` の `LevelPlayBannerAdUnitID` |
+| SDK | Unity LevelPlay（`LevelPlay-Swift-Package`）＋ Unity Ads アダプタ（Swift Package） |
+| 同意と ATT | `Ketsuatsu/Services/Ads/PrivacyConsentManager.swift`、画面は `Ketsuatsu/Views/Ads/AdConsentView.swift` |
 
-**Debug ビルドではテスト広告が出ます。** 自分のアプリで自分の本番広告をタップすると Unity LevelPlay の規約違反となり、アカウントが停止されることがあるためです。実機で本番の広告を確認したい場合は、Unity LevelPlay の管理画面で自分の端末を「テストデバイス」に登録してください。
+> **⚠️ Debug ビルドでも本番の広告ユニットにリクエストが飛びます。** ビルド構成で広告を出し分けていません（仕様書 1-6）。
+> 動作確認は、LevelPlay 管理画面の **Test devices** に登録した端末でだけ行い、表示された広告には絶対に触れないでください。
+> 手順は `docs/広告の動作確認手順.md` を参照してください。
 
 初回ビルド時、Xcode が Swift Package を取得します（数分かかります）。取得に失敗する場合は
 File → Packages → Resolve Package Versions を実行してください。
@@ -75,6 +77,10 @@ File → Packages → Resolve Package Versions を実行してください。
 ## 2. ★ プライバシーポリシーとサポートページの公開
 
 App Store Connect では **プライバシーポリシー URL とサポート URL が必須**です。HealthKit を使うアプリは特にプライバシーポリシーが厳しく見られます。
+
+YutarouLabs のアプリは `yutaroulabs.com` に公開します（仕様書 2-4）。サポートは `https://yutaroulabs.com/support/ketsuatsu/`、プライバシーポリシーも `yutaroulabs.com` 配下です。原本はこのフォルダの `privacy-policy.md` と `support.md` です。
+
+以下の GitHub Pages の手順は、`yutaroulabs.com` で公開できないときの予備です。
 
 このリポジトリの GitHub Pages で公開するのが手軽です。
 
@@ -145,21 +151,28 @@ Organizer → Distribute App → App Store Connect → Upload
 
 ## 7. 提出前の最終確認
 
-- [ ] Bundle ID を自分のものに変えた
-- [ ] Team を選び、署名が通っている
+共通の項目は仕様書 Part 6 をすべて埋めてください。本アプリで特に確認すること：
+
+- [ ] 作業ブランチを `main` へマージし、Archive 元のコミットを `App-Store-登録情報.md` に記録した（仕様書 2-10・2-17）
+- [ ] CI（`iOS build`）が緑である
+- [ ] Bundle ID が App Store Connect に登録済みの値と一致している（変更はしない）
+- [ ] Build 番号がアップロード済みの値と重複していない
+- [ ] 同意画面で **どちらを選んでも ATT が表示される** ことを実機で確認した（アプリを削除して入れ直して 2 回試す）
+- [ ] 同意と ATT が終わるまでバナーが出ず、広告のリクエストも出ていない
+- [ ] 開発実機を LevelPlay の Test devices に登録し、テスト広告だけが出ることを確認した。**広告をクリックしていない**
 - [ ] プライバシーポリシー URL とサポート URL が実際に開ける
-- [ ] スクリーンショット 6 枚をアップロードした
-- [ ] App のプライバシーで、広告（Unity LevelPlay）とアクセス解析（Firebase Analytics）が扱うデータを申告した
-      （`store-listing.md` の表のとおり。「データを収集していません」は選ばない）
+- [ ] スクリーンショット 6 枚をアップロードした（広告と同意画面が写っていない）
+- [ ] App のプライバシーを `store-listing.md` の表（＝ `PrivacyInfo.xcprivacy`）に合わせた。「データを収集していません」は選ばない
+- [ ] 年齢指定を3行の質問票で回答した（広告: はい）
 - [ ] 本番のバンドル ID と `GoogleService-Info.plist` の `BUNDLE_ID` が一致している
 - [ ] `Package.resolved` に Firebase の固定が入った状態でコミットした
 - [ ] DebugView で `FIREBASE_ANALYTICS.md` の確認表どおりにイベントが出た（健康情報がパラメータに含まれていない）
 - [ ] 更新したプライバシーポリシーを公開した
-- [ ] 年齢指定を回答した（医療／治療情報: まれ／軽度 → 12+）
-- [ ] 審査メモに HealthKit とカメラの用途、動作確認手順を書いた
+- [ ] 審査メモに HealthKit とカメラの用途、広告と ATT、動作確認手順を書いた
 - [ ] 血圧計の写真を審査用に添付した
 - [ ] 実機で一通り動作を確認した（記録・写真読み取り・通知・ヘルスケア・CSV）
-- [ ] 実機でバナー広告が表示されることを確認した（Debug ビルドではテスト広告）
+- [ ] プロモーション用テキストを新しいバージョンに入力し直した（新バージョンを作ると空になる）
+- [ ] リリース方法を「審査承認後に自動リリース」にした
 
 ## 審査で指摘されやすい点
 
