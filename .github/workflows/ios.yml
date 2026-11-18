@@ -2,12 +2,12 @@ name: iOS build
 
 # 仕様書 2-14。yutaroulabs-spec の templates/ios.yml を元に、XcodeGen を使わないこのアプリ向けにした。
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-15
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - name: Select newest Xcode
