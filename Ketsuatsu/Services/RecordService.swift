@@ -105,9 +105,12 @@ enum RecordService {
     /// 送るのは記録方法と件数だけで、血圧値・脈拍・メモなどの内容は含めない。
     private static func logEntryCompleted(method: AppAnalytics.EntryMethod, persistedCount: Int) {
         AppAnalytics.entryCompleted(method, recordCount: persistedCount)
-        if EntryMilestoneTracker().addCompletedEntries(persistedCount) {
+        let tracker = EntryMilestoneTracker()
+        if tracker.addCompletedEntries(persistedCount) {
             AppAnalytics.thirdEntryCompleted()
         }
+        // 記録が 5 件たまった後で、iOS 標準の評価画面をお願いする（ReviewPromptPolicy の条件つき）。
+        ReviewPrompter.requestIfAppropriate(completedEntries: tracker.completedEntries)
     }
 
     static func update(_ record: BPRecord, with draft: BPDraft, context: ModelContext, settings: AppSettings) async {
