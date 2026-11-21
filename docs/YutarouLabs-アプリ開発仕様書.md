@@ -1,6 +1,6 @@
 # YutarouLabs iOSアプリ 開発仕様書
 
-**最終更新：2026年10月15日**
+**最終更新：2026年11月20日**
 
 **このファイルの使い方**：新しいアプリの開発を依頼するとき、このファイルを最初に読ませてください。
 以降の指示は、このファイルに書かれた規則を前提とします。
@@ -297,7 +297,8 @@ Flutter は「うちの沿線速報」「うちのマインスイーパー」の
     広告の動作確認手順.md         … Part 1-6
     HANDOFF.md                  … 別チャット・別セッションへ渡す指示文と、その結果
     PRIVACY_POLICY.md           … 公開するプライバシーポリシーの原本
-  .github/workflows/ios.yml     … Part 2-14
+  ci_scripts/ci_post_clone.sh   … Part 2-14（Xcode Cloud。XcodeGen を使う場合）
+  .github/workflows/ios.yml     … Part 2-14（手動実行だけの予備）
 ```
 
 - Bundle ID は `com.yutaroulabs.<slug>`（すべて小文字）【必須】
@@ -496,11 +497,12 @@ LevelPlay（ironSource Ads＋Unity Ads）構成の標準値：
 
 | 項目 | 値 |
 |---|---|
-| `NSPrivacyTracking` | `true`（ATTを出すため） |
-| `NSPrivacyTrackingDomains` | 空配列（SDK側のマニフェストに任せる） |
-| 収集データ | `DeviceID`、`AdvertisingData`、`ProductInteraction`。いずれも 目的＝`ThirdPartyAdvertising`、ユーザーに紐づけない、トラッキングに使わない |
+| `NSPrivacyTracking` | **`false`**。`true` にすると `NSPrivacyTrackingDomains` を1件以上書かないとアップロード時に ITMS-91064 で弾かれる。アプリ自身がトラッキング用ドメインへ接続することはなく、LevelPlay／ironSource／Unity Ads の各マニフェストも `false` を宣言しているため、アプリ側も `false` にする（ATT は別途表示する） |
+| `NSPrivacyTrackingDomains` | 空配列 |
+| 収集データ | `DeviceID`、`AdvertisingData`、`ProductInteraction`。いずれも 目的＝`ThirdPartyAdvertising`、ユーザーに紐づけない。**`DeviceID` と `AdvertisingData` は「トラッキングに使用＝はい」**（`NSPrivacyCollectedDataTypeTracking` = `true`）、`ProductInteraction` は「いいえ」 |
 | 必須理由API | `UserDefaults` → `CA92.1`。他に使うAPI（ファイルタイムスタンプ等）があれば追加 |
 
+- `NSUserTrackingUsageDescription` を持つアプリは、App Store Connect の「アプリのプライバシー」でトラッキング用途のデータを1つ以上宣言しないと「審査へ提出」で止まる（2026-10-18 不動産カルテ 2.2 で発生）。上の表のとおり、デバイスID と広告データを「第三者による広告・ユーザーに紐づけない・トラッキングに使用＝はい」で回答する。ATT で拒否されたときに IDFA を使わないのは SDK 側の挙動であり、宣言は「許可されたときに使う」実態に合わせる
 - アプリ本体が集めるデータ（記録・学習履歴・音声）は端末内に留め、収集データに含めない
 - 広告SDKを追加・削除したら、このファイルと App Store Connect の回答を同時に見直す
 - 計測（4-7）を入れたアプリは `ProductInteraction` の目的に `Analytics` を足す
@@ -512,13 +514,22 @@ LevelPlay（ironSource Ads＋Unity Ads）構成の標準値：
 - 対象：`Game/` のルール、`AdFreePolicy`、経路・判定・解析などUIに依存しないもの、計測の「N回目」カウンタ
 - UIに依存しないよう、テスト対象は `Foundation` のみに依存する型へ切り出す
 - 「コードレビューで見つかった不具合」を直したときは、回帰テストを同じコミットに入れる
-- `.github/workflows/ios.yml` で、push／PR ごとに次を回す：
+- 【推奨】CI は **Xcode Cloud** で回す（2026-11-20 から。Apple Developer Program に毎月 25 時間が無料で付く。1 回 10〜15 分なら月 100〜150 回）。
+  GitHub Actions の macOS ランナーは使わない（Linux の約10倍の料金。2026-10 に iOS の CI で GitHub Pro の 3,000 分を使い切り、2026-11 も予算 $70 に迫った。yutaroulabs-ops docs/BUDGET.md）
+  - ワークフローは 1 つ：「Pull Request（main 宛て）」で開始し、アクションは「Test（iOS Simulator）」。`main` への push・作業ブランチの push では動かさない
+  - 文書だけの変更では動かさない（開始条件の「ファイルとフォルダ」で `**/*.md`・`docs/**`・`fastlane/metadata/**` を除く）
+  - XcodeGen を使うリポジトリは `ci_scripts/ci_post_clone.sh`（`templates/ci_post_clone.sh`）で `xcodegen generate` する。実行権限（`chmod +x`）を付けてコミットする
+  - Xcode Cloud の設定は Xcode の「Product › Xcode Cloud › Create Workflow」から本人が行う（GitHub の連携はリポジトリ単位で許可する）
+  - Xcode 26 系を選ぶ（ワークフローの「Environment」で Xcode のバージョンを「最新の Release」にする）
+- 予備として `.github/workflows/ios.yml`（`templates/ios.yml`）を置くが、**手動実行（`workflow_dispatch`）だけ**にする。push・PR では動かさない。Xcode Cloud の時間が足りない月・障害のときだけ画面から動かす。中身は次のとおり：
   1. `macos-15` ランナーで Xcode 26 系を選択
   2. （XcodeGen の場合）`brew install xcodegen` → `xcodegen generate`
   3. `xcodebuild -resolvePackageDependencies`
   4. `generic/platform=iOS Simulator` で `CODE_SIGNING_ALLOWED=NO` のビルド
   5. `build-for-testing`
-- CI が緑であることを提出前の条件に含める（Part 6）
+- CI（Xcode Cloud の PR のワークフロー）が緑であることを提出前の条件に含める（Part 6）
+- 作業中の確かめは手元の Xcode（`⌘U`）で行い、CI を何度も回さない
+- Xcode Cloud の使用時間は App Store Connect の「Xcode Cloud › 使用状況」で見られる。月 20 時間を超えたら、その月はテストの対象を絞る（UI テストを外す）
 
 ## 2-15. Apple Intelligence・App Intents【推奨】
 
@@ -697,6 +708,38 @@ App Store Connectを操作できる担当者またはエージェントが、ビ
 - `apps.json`、Web一覧、クロスプロモーション用一覧を別々に二重管理しない
 - App Storeで未公開、予約中、配信停止中のアプリを `published: true` にしない
 - App Store IDが確定する前の仮URLを公開データへ残さない
+
+## 3-7. App Store配信地域（ヨーロッパ42か国・地域の除外）【必須】
+
+**方針：YutarouLabsの新規iOSアプリは、特別な指示がない限り、ヨーロッパ42か国・地域を配信対象から外す。** 無料・有料・アプリ内課金の有無を問わず適用する。変更が必要な場合は、公開前にユーザーへ確認する。
+
+**導入理由・経緯（2026-10-18）**：AppleのEUデジタルサービス法（DSA）に関する公開連絡先の取り扱いを受け、個人住所等をEUストアへ公開しない運用として配信地域を見直した。App Store Connect APIで管理対象25アプリのEU27か国（25 × 27 = 675設定）がすべてOFFであることを確認し、続けてヨーロッパ42か国・地域も25アプリすべてで配信設定ON=0・要確認=0を確認した。
+
+### 初回公開・新規アプリ登録時【必須】
+
+1. **審査提出前**にApp Store Connectの対象アプリで **「価格および配信状況」→「アプリの配信状況」→「管理」**（表示文言はAppleのUI変更に合わせる）を開く。
+2. 配信地域を「特定の国または地域」で管理し、**「ヨーロッパ（42）」のチェックを外す**。日本など、それ以外の配信希望地域のチェックは残す。EU加盟27か国だけを外す運用ではなく、今回の標準はヨーロッパ42か国・地域の除外とする。
+3. 保存・確定後、対象国・地域が選択解除されたことを画面で確認する。UIの変更により地域数やグループが変わったときは、現行の対象国を確認し、安易に「42」の固定値だけで判断しない。
+4. Mac上の読み取り専用監査を手動実行し、対象アプリのヨーロッパ地域が **ON=0、OFF=42、不明=0** であることを確認する。APIが未提供・未設定のアプリで「不明」が出た場合は、正常とみなさずApp Store Connect画面を直接確認する。
+5. **配信地域の確認が終わるまで審査提出しない。** GitHubのコード変更、ビルド成功、定期監視の通知だけで完了とは扱わない。新規アプリ公開の記録（例：`App-Store-登録情報.md`）にも配信地域の確認結果を残す。
+
+### Macで稼働する既存の自動監査【参考／新規公開前の手動確認は必須】
+
+- スクリプト：`~/YutarouLabs/apple-eu-availability/eu_guard.py`
+- 認証：Macに保存したApp Store Connect APIキーを使用（**秘密鍵やJWTをGitHub・Issue・チャットへ掲載しない**）。
+- 実行：`cd "$HOME/YutarouLabs/apple-eu-availability" && ./.venv/bin/python eu_guard.py --check`
+- 自動監査：macOS LaunchAgent `com.yutaroulabs.eu-guard` が **6時間ごと／Macログイン時**に監査し、ヨーロッパでの配信ONまたは状態不明のアプリを検出するとmacOS通知する。
+- 確認：`launchctl list | grep com.yutaroulabs.eu-guard`
+- CSV：`~/YutarouLabs/apple-eu-availability/eu_guard_latest.csv` に結果を出力する。
+- **自動監査はGETによる読み取り専用であり、配信地域を自動変更しない。** Macの電源OFF・スリープ中は監査できず、通知も審査提出をブロックしない。**初回公開時は定期監査を待たず手動実行**する。
+- 2026-10-18時点の既存監査では、App Store Connect登録27アプリのうち25アプリを対象とし、**`RyugakuEnglish`・`GuideExam50` はユーザー指定により監視対象外**。配信停止済みの証明ではないため、両アプリの公開を再開する場合は地域設定を別途確認する。
+- `availableInNewTerritories=True`（新しく追加されるApp Store地域への自動配信）は既存25アプリで確認されている。**既存のヨーロッパ42か国の除外を解除する設定ではない**が、将来追加される地域には配信され得る。必要に応じてApp Store Connectで個別にOFFを検討する。
+- 監査用の`AuthKey_*.p8`、設定ファイル、ローカルログ、CSVは**仕様書の同期対象ではない**。各アプリのGitHubへ機密情報をコピーしない。
+
+### DSA申告との関係【必須】
+
+- この運用は**配信先を制限する手順**であり、DSAのトレーダーステータス申告やAppleの契約への同意を自動実施するものではない。
+- DSA申告はApp Store Connect側で別途完了させる。EU配信を再開する場合は、申告内容・公開連絡先・配信地域の整合性を事前に再確認する。
 
 ---
 
@@ -930,7 +973,7 @@ App Store Connectを操作できる担当者またはエージェントが、ビ
 **既存アプリとの衝突**
 
 うちの英会話（10/11時点）は、インタースティシャル・MREC・ネイティブ広告を実装し、ATTを出さず、Bundle ID が `jp.ohno.*` になっている。
-本書と合わない点は、次のアップデートで本書に合わせる（インタースティシャルとネイティブの削除、ATT追加、`PrivacyInfo.xcprivacy` の `NSPrivacyTracking` を `true`）。
+本書と合わない点は、次のアップデートで本書に合わせる（インタースティシャルとネイティブの削除、ATT追加、`PrivacyInfo.xcprivacy` を 2-13 の標準値に）。
 Bundle ID は変更しない。
 
 ---
@@ -1122,7 +1165,7 @@ Analytics・おすすめアプリ・課金・広告など、複数リポジト�
 - [ ] `PrivacyInfo.xcprivacy` があり、SDK構成と一致している
 - [ ] 共通起動画面（3 imageset＋storyboard）が入り、`CFBundleDisplayName` が「うちの◯◯」である
 - [ ] `.gitignore` を配置した
-- [ ] 単体テストが通り、CI（`iOS build`）が緑である
+- [ ] 単体テストが通り、CI（Xcode Cloud の PR のワークフロー。予備の GitHub の `iOS build` を手動で回した場合はそれ）が緑である
 - [ ] （FoundationModels使用時）iOS 17〜25 の端末・シミュレータで機能が隠れ、クラッシュしない
 - [ ] （計測使用時）`GoogleService-Info.plist` が自アプリのもので、Debugで `-FIRDebugEnabled` なしに送信されない
 - [ ] （共通部品使用時）原本のバージョンと一致し、必須イベント・設定キーの差分検査が通る
@@ -1141,6 +1184,8 @@ Analytics・おすすめアプリ・課金・広告など、複数リポジト�
 - [ ] App PrivacyがLevelPlay・ironSource Ads・Unity Ads（＋Firebase）を含む現行SDK構成と一致している
 - [ ] 審査メモにATT・広告・課金・音声の確認手順を書いた
 - [ ] リリース方法が「審査承認後に自動リリース」で、不要な配信予定日時を要求しない
+- [ ] 新規アプリの初回提出前にApp Store Connectでヨーロッパ42か国・地域を除外し、保存した（3-7）
+- [ ] 監査対象アプリは `eu_guard.py --check` で地域ON=0・OFF=42・不明=0を確認した。監査で確認できなければ画面で直接確認して記録した（3-7）
 - [ ] ビルド選択後の必須項目を入力し、提出直前までエラーがない
 - [ ] 原本に提出記録と「公開後にやること」を追記した
 
@@ -1207,3 +1252,18 @@ Analytics・おすすめアプリ・課金・広告など、複数リポジト�
 | 4-9 | 新設：共通部品のバージョン管理と差分検査 | book、gomi、Firebase導入済み各アプリ |
 | Part 5 | ウィジェット・共有・AI・計測・課金の欄を追加 | — |
 | Part 6 | 課金セクション新設、ブランチ・CI・Manifest・起動画面・年齢区分の項目追加 | — |
+
+## 2026年10月18日追補
+
+| 節 | 変更 | 根拠となったリポジトリ・出来事 |
+|---|---|---|
+| 3-7（新設） | ヨーロッパ42か国・地域の新規アプリ除外を必須化。App Store Connectでの手動設定、macOS LaunchAgentによる6時間間隔の読み取り専用監査、例外2アプリ、DSA申告との区別を明記 | 2026-10-18 App Store Connect API監査：27アプリ中25アプリ、EU27×25=675設定OFF、ヨーロッパ42地域も監査上ON=0 |
+| Part 6 | 初回提出前の地域除外と監査確認をチェックリストに追加 | 上記と同じ |
+| 2-13 | `DeviceID`・`AdvertisingData` を「トラッキングに使用＝はい」に訂正し、App Store Connect の回答との対応を追記。`NSPrivacyTracking` は `true`（空配列）だとアップロードで ITMS-91064 になるため **`false`** に訂正し、`templates/PrivacyInfo.xcprivacy` も同じ値に揃えた | 2026-10-18 real-estate-api-lab 2.2: 提出時に「トラッキング用途の宣言が無い」で提出不可、Build 1 が ITMS-91064 で差し戻し |
+
+## 2026年10月20日追補
+
+| 節 | 変更 | 根拠となったリポジトリ・出来事 |
+|---|---|---|
+| 2-14 | CI の起動を「すべての push／PR」から「main への push と PR」に絞り、文書だけの変更では動かさない・同じブランチの古い実行を取り消す・手動実行を残す規則を【推奨】で追加。`templates/ios.yml` を同じ内容に改訂。ビルドとテストの中身、提出前に CI が緑である条件（Part 6）は変えない | 2026-10 に GitHub Pro の 3,000 分を iOS リポジトリの CI で使い切り、予算 $0 のため全リポジトリの Actions が開始されずに失敗（2026-10-19、運営者が予算を $50 に変更して復旧） |
+| 2-14 | CI を Xcode Cloud（Apple Developer Program に月 25 時間が無料で付く）の「main 宛ての PR だけ」のワークフローに移し、GitHub の `ios.yml` は手動実行だけの予備にした。XcodeGen 用の `templates/ci_post_clone.sh` を追加。Part 6 の CI の項目を合わせた | 2026-11-20、GitHub Actions の 11 月の請求見込みが予算 $70 の 78%。macOS ランナーは Linux の約10倍で、アプリ開発を再開すると足りなくなるため（本人「全部進めましょう」） |

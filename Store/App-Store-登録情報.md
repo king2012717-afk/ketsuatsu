@@ -10,13 +10,13 @@
 | 項目 | 値 |
 |---|---|
 | アプリ名 | うちの血圧記録 |
-| Bundle ID | `com.example.Ketsuatsu`（リポジトリ上の値。App Store Connect の登録値と一致しているか要確認） |
+| Bundle ID | `com.example.Ketsuatsu`（App Store Connect の登録値と一致。2026-11-21 運営データで確認。登録済みのため変更しない） |
 | 販売元 | Yutarou Nagano |
 | 著作権 | 2026 YutarouNagano |
 | サポートURL | https://yutaroulabs.com/support/ketsuatsu/ |
 | マーケティングURL | https://yutaroulabs.com |
-| App Store ID | （公開後に記入） |
-| App Store URL | （公開後に記入） |
+| App Store ID | 6799039547 |
+| App Store URL | https://apps.apple.com/jp/app/id6799039547 |
 | 価格 | 無料（広告あり・課金なし） |
 
 ---
@@ -31,7 +31,7 @@ Archive は必ず `main` から作り、そのコミット SHA を記録しま�
 | 1.2 | （未記録） | （未記録） | （未記録） | 配信中（2026年10月17日時点） |
 | 1.3 | 1 | `37c9673` | （未提出） | App Store Connect で「NSUserTrackingUsageDescription があるのにトラッキングの申告がない」と止められた |
 | 1.3 | 2 | `47b7e62` | 2026-10-17 | ITMS-91064（Invalid tracking information）で差し戻し |
-| 1.3 | 3 | （提出時に記入） | （提出時に記入） | マニフェストを NSPrivacyTracking false・ドメインのキーなしに直したビルド |
+| 1.3 | 3 | `923ccda`（推定：2026-11-21 時点で Mac の作業コピーが未変更のままこのコミットだった） | （未記録） | マニフェストを NSPrivacyTracking false・ドメインのキーなしに直したビルド。2026-10-19 に配信開始（App Store のバージョン履歴で確認） |
 
 ---
 
