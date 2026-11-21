@@ -237,6 +237,29 @@ final class SegmentDisplayReaderTests: XCTestCase {
         XCTAssertNil(chosen)
     }
 
+    /// 脈拍の段だけ判定がきわどいときは、上下の値は返し、脈拍は空にする。
+    func testLeavesPulseEmptyWhenItsRowHasNoMargin() {
+        let chosen = SegmentDisplayReader.choose([
+            row("128", y: 100), row("82", y: 230), row("33", y: 360, height: 60, margin: 0.025),
+        ])
+        XCTAssertEqual(values(chosen), reading(128, 82, nil))
+    }
+
+    /// 斜体のきつい脈拍を別の数字に読み違えない（読めなければ空にする）。
+    func testDoesNotMisreadStronglySlantedPulse() {
+        var canvas = Canvas()
+        canvas.draw("128", rightEdge: 470, top: 90, height: 120)
+        canvas.draw("82", rightEdge: 470, top: 250, height: 120)
+        canvas.slant = 0.15
+        canvas.draw("77", rightEdge: 450, top: 420, height: 70)
+
+        let result = SegmentDisplayReader.read(canvas.image)
+
+        XCTAssertEqual(result?.systolic, 128)
+        XCTAssertEqual(result?.diastolic, 82)
+        XCTAssertTrue(result?.pulse == nil || result?.pulse == 77, "脈拍 \(String(describing: result?.pulse))")
+    }
+
     func testRejectsImplausiblePairs() {
         XCTAssertNil(SegmentDisplayReader.choose([row("82", y: 100), row("128", y: 230)]))   // 上下が逆
         XCTAssertNil(SegmentDisplayReader.choose([row("128", y: 100), row("82", y: 500)]))   // 離れすぎ

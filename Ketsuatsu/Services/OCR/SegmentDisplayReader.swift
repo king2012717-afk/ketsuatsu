@@ -64,7 +64,7 @@ enum SegmentDisplayReader {
     private static let faintLitLevel = 0.28, faintCoverage = 0.6
     /// 隣の桁までのすき間の上限（数字の高さに対する割合）。「1」は桁の右に寄るので広く取る。
     private static let digitGap = 0.5, narrowDigitGap = 0.75
-    /// 上下の段として採用する最低の判定の余裕。7 セグメントでない文字（普通の書体の数字や文章）を
+    /// 上・下・脈拍の段として採用する最低の判定の余裕。7 セグメントでない文字（普通の書体の数字や文章）を
     /// 無理に数字へ当てはめた段は余裕がほとんどない（実機の写真は 0.06 以上、誤読は 0.03 以下だった）。
     static let minimumMargin = 0.05
     /// 幅がこれより狭い塊は「1」。
@@ -514,7 +514,9 @@ enum SegmentDisplayReader {
 
         var pulse: (score: Double, row: Row)?
         for row in rows where row != upper && row != lower && overlap(row, upper) <= 0.1 && overlap(row, lower) <= 0.1 {
-            guard row.box.y >= lower.box.y + 0.6 * lower.box.height,
+            // 脈拍も、判定がきわどい段は採用しない（誤った脈拍を出すより、空欄にして手で入れてもらう）。
+            guard row.margin >= minimumMargin,
+                  row.box.y >= lower.box.y + 0.6 * lower.box.height,
                   row.box.y - lower.box.maxY <= lower.box.height,
                   row.digitHeight <= 1.15 * lower.digitHeight, row.digitHeight >= 0.35 * lower.digitHeight,
                   row.box.maxX >= lower.box.x, row.box.x <= lower.box.maxX + lower.digitHeight,
