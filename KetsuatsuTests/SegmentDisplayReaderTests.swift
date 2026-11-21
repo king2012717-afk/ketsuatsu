@@ -15,6 +15,8 @@ final class SegmentDisplayReaderTests: XCTestCase {
         var digit: UInt8 = 50
         /// 斜体の傾き（上へ行くほど右へずれる量。高さに対する割合）。
         var slant = 0.0
+        /// 桁と桁のすき間（高さに対する割合）。
+        var digitSpacing = 0.25
 
         /// - Parameters:
         ///   - scale: 600 画素四方を 1 とした大きさ
@@ -42,7 +44,7 @@ final class SegmentDisplayReaderTests: XCTestCase {
 
         /// 右端をそろえて数字を描く。`shortLeadingOne` のときは、先頭の「1」を低く、離して描く。
         mutating func draw(_ text: String, rightEdge: Int, top: Int, height h: Int, shortLeadingOne: Bool = false) {
-            let cell = Int(Double(h) * 0.55), spacing = Int(Double(h) * 0.25)
+            let cell = Int(Double(h) * 0.55), spacing = Int(Double(h) * digitSpacing)
             var x = rightEdge - text.count * cell - (text.count - 1) * spacing
             for (index, character) in text.enumerated() {
                 if shortLeadingOne, index == 0, character == "1" {
@@ -190,6 +192,29 @@ final class SegmentDisplayReaderTests: XCTestCase {
         XCTAssertEqual(values(SegmentDisplayReader.read(canvas.image)), reading(128, 97, 70))
     }
 
+    /// 斜めから撮って、数字の段が傾いて写った写真（傾きを見つけて、水平に直してから読む）。
+    func testReadsTiltedDisplay() {
+        var canvas = Canvas()
+        canvas.drawStandardReading()
+        for degrees in [-13.0, 9.0, 16.0] {
+            let tilted = SegmentDisplayReader.Plane(canvas.image).rotated(byRadians: degrees * .pi / 180)
+            let image = GrayImage(width: tilted.width, height: tilted.height, pixels: tilted.pixels)
+            XCTAssertEqual(values(SegmentDisplayReader.read(image)), reading(128, 82, 70), "傾き \(degrees) 度")
+        }
+    }
+
+    /// 桁の間隔が狭く、斜体で隣の桁の四角が重なる表示（桁を四角で切ると隣の線が混じる）。
+    func testReadsTightlySpacedItalicDigits() {
+        var canvas = Canvas()
+        canvas.slant = 0.15
+        canvas.digitSpacing = 0.1
+        canvas.draw("120", rightEdge: 450, top: 90, height: 120)
+        canvas.draw("70", rightEdge: 450, top: 250, height: 120)
+        canvas.draw("60", rightEdge: 450, top: 420, height: 70)
+
+        XCTAssertEqual(values(SegmentDisplayReader.read(canvas.image)), reading(120, 70, 60))
+    }
+
     func testReturnsNothingForBlankOrTinyImages() {
         XCTAssertNil(SegmentDisplayReader.read(Canvas().image))
         XCTAssertNil(SegmentDisplayReader.read(GrayImage(width: 20, height: 20, pixels: [UInt8](repeating: 128, count: 400))))
@@ -227,6 +252,33 @@ final class SegmentDisplayReaderTests: XCTestCase {
             row("36", y: 100), row("90", y: 230), row("61", y: 360, height: 82),
         ])
         XCTAssertNil(chosen)
+    }
+
+    /// 上の段が読めなかったとき（数字は空で場所だけ分かる）も、その下の 2 段を上下として出さない。
+    /// 読めなかった段は一部の桁しか含まず、右端がそろわないことがある。
+    func testDoesNotSkipAnUnreadTopRow() {
+        let unread = SegmentDisplayReader.Row(
+            text: "", box: .init(x: 190, y: 100, width: 140, height: 100), digitHeight: 100, margin: 0, isPartial: false
+        )
+        XCTAssertNil(SegmentDisplayReader.choose([unread, row("79", y: 230), row("70", y: 360, height: 90)]))
+        // 読めなかった並びが離れた場所や小さい文字なら、関係ない。
+        let small = SegmentDisplayReader.Row(
+            text: "", box: .init(x: 190, y: 30, width: 140, height: 40), digitHeight: 40, margin: 0, isPartial: false
+        )
+        XCTAssertEqual(values(SegmentDisplayReader.choose([small, row("128", y: 100), row("82", y: 230)])), reading(128, 82, nil))
+    }
+
+    func testDominantTilt() {
+        typealias Tilt = SegmentDisplayReader.Tilt
+        // 大きな並びの傾きを使う。小さな並び（模様など）には引きずられない。
+        let angle = SegmentDisplayReader.dominantTilt([
+            Tilt(slope: 0.9, weight: 40), Tilt(slope: -0.23, weight: 300), Tilt(slope: -0.2, weight: 280), Tilt(slope: -0.25, weight: 200),
+        ])
+        XCTAssertEqual(angle ?? 0, atan(-0.23), accuracy: 0.001)
+        // ほぼ水平・傾きすぎ・手がかりなしは補正しない。
+        XCTAssertNil(SegmentDisplayReader.dominantTilt([Tilt(slope: 0.02, weight: 300)]))
+        XCTAssertNil(SegmentDisplayReader.dominantTilt([Tilt(slope: 1.0, weight: 300)]))
+        XCTAssertNil(SegmentDisplayReader.dominantTilt([]))
     }
 
     /// 判定がきわどい段（7 セグメントでない文字を無理に当てはめたもの）は採用しない。
@@ -328,6 +380,23 @@ final class SegmentDisplayReaderTests: XCTestCase {
         XCTAssertEqual(small.height, 2)
         XCTAssertEqual(small.pixels, [0, 0, 200, 200, 0, 0, 200, 200])
         XCTAssertEqual(plane.resized(longSide: 100).pixels, plane.pixels)   // 拡大はしない
+    }
+
+    func testRotationLevelsATiltedLine() {
+        // 右へ進むと下がる斜めの線（約 14 度）を描き、その角度で回すと水平になる。
+        var plane = SegmentDisplayReader.Plane(width: 201, height: 201, fill: 255)
+        for x in 20...180 {
+            let y = 100 + Int((Double(x - 100) * 0.25).rounded())
+            for dy in -1...1 { plane.pixels[(y + dy) * 201 + x] = 0 }
+        }
+
+        let level = plane.rotated(byRadians: atan(0.25))
+
+        // 回したあとは、線が中央の行の近くにだけある。
+        var rows = Set<Int>()
+        for y in 0..<201 { for x in 40...160 where level.pixels[y * 201 + x] < 100 { rows.insert(y) } }
+        XCTAssertFalse(rows.isEmpty)
+        XCTAssertTrue(rows.allSatisfy { abs($0 - 100) <= 2 }, "\(rows.sorted())")
     }
 
     func testJoinsVerticalPiecesOfOne() {

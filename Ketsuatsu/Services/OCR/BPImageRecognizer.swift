@@ -10,7 +10,8 @@ import Vision
 ///
 /// 1. 元の写真をそのまま読む（2 番目以降の認識候補も使う）
 /// 2. 本体に印字された SYS／DIA／PULSE などを手がかりに、7 セグメントの数字を直接読む
-/// 3. 印字に頼らず、液晶の数字の形と並びだけから読む（印字が右にある・液晶の中にある・日本語の機種など）
+/// 3. 印字に頼らず、液晶の数字の形と並びだけから読む（印字が右にある・液晶の中にある・日本語の機種など）。
+///    上・下・脈拍の 3 段がはっきり読めたら、それを採用して終わる
 /// 4. ここまでで 2 つの読み方が一致しなければ、セグメントをつないだ画像で読み直す
 /// 5. それでも一致しなければ、コントラストを強めた画像で読み直す
 ///
@@ -76,7 +77,12 @@ enum BPImageRecognizer {
             }
             // 3. 印字に頼らず、数字の形と並びから読む
             if let reading = SegmentDisplayReader.read(gray) {
-                results.append(BPParseResult(reading))
+                let shape = BPParseResult(reading)
+                // 上・下・脈拍の 3 段がはっきり読めたときは、これを採用する（文字認識の読み直しは省く）。
+                if let preferred = BPReadingCombiner.preferringShapeReading(shape, over: results) {
+                    return Output(result: preferred, recognizedLines: rawItems.map(\.text))
+                }
+                results.append(shape)
             }
         }
 

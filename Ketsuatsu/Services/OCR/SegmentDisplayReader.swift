@@ -11,8 +11,9 @@ import Foundation
 /// 3. インクの濃い画素を塊にまとめ、数字らしい大きさの塊を横に並べて段にする
 /// 4. 段ごとに斜体を補正し、7 か所のインクの濃さ（その桁の中での相対値）で数字を決める
 /// 5. 上下に並んだ同じ大きさの 2 段（上の血圧・下の血圧）と、その下の脈拍を選ぶ
+/// 6. 読めなかったときは、数字の並びの傾きを調べ、傾いていれば水平に直して 1〜5 をやり直す（斜めから撮った写真）
 ///
-/// 公開されている実機の写真 19 枚（6 機種）で、上下とも正解 15 枚・誤った値 0 枚・読めず 4 枚（2026-11-21）。
+/// 実機の写真 20 枚（7 機種）で、上下とも正解 17 枚・誤った値 0 枚・読めず 3 枚（2026-11-21）。
 /// 読めないときは nil を返し、誤った値を出さないことを優先している。
 enum SegmentDisplayReader {
 
@@ -22,8 +23,9 @@ enum SegmentDisplayReader {
         var maxY: Double { y + height }
     }
 
-    /// 読み取れた数字の段。座標は元の画像の画素（左上が原点）。
+    /// 数字の段。座標は元の画像の画素（左上が原点）。
     struct Row: Equatable, Sendable {
+        /// 読み取った数字。数字らしい並びなのに読めなかった段は空。
         var text: String
         var box: PixelRect
         /// 数字の高さ（元の画像の画素）。
@@ -45,7 +47,32 @@ enum SegmentDisplayReader {
     }
 
     static func read(_ image: GrayImage) -> Reading? {
-        choose(rows(in: image))
+        guard image.width >= 40, image.height >= 40 else { return nil }
+        // いちばん大きい段階の画像を作り、それより小さい段階はそこから縮小する。
+        let base = Plane(image).resized(longSide: levels[0])
+        let ratio = Double(base.width) / Double(image.width)
+        let upright = scan(base, ratio: ratio)
+        if let reading = choose(upright.rows) { return reading }
+
+        // 斜めから撮った写真は数字の段が傾いて写る。傾きが分かれば、水平に直してもう一度読む。
+        guard let angle = dominantTilt(upright.tilts) else { return nil }
+        return choose(scan(base.rotated(byRadians: angle), ratio: ratio).rows)
+    }
+
+    /// 傾いた数字の並び（傾きは dy/dx、重みは数字の大きさ × 個数）。
+    struct Tilt: Equatable, Sendable {
+        var slope: Double
+        var weight: Double
+    }
+
+    /// 補正する傾き（ラジアン）。大きな数字の並びの傾きを代表にする。ほぼ水平、または傾きすぎなら nil。
+    static func dominantTilt(_ tilts: [Tilt]) -> Double? {
+        guard let heaviest = tilts.map(\.weight).max() else { return nil }
+        // いちばん大きい並びと同じくらい大きい並びの中央値を使う（模様などの小さな並びに引きずられないため）。
+        let slopes = tilts.filter { $0.weight >= 0.6 * heaviest }.map(\.slope).sorted()
+        let angle = atan(slopes[slopes.count / 2])
+        let degrees = abs(angle) * 180 / .pi
+        return (minimumTiltDegrees...maximumTiltDegrees).contains(degrees) ? angle : nil
     }
 
     // MARK: - 設定値（実機の写真で決めた）
@@ -65,8 +92,19 @@ enum SegmentDisplayReader {
     /// 隣の桁までのすき間の上限（数字の高さに対する割合）。「1」は桁の右に寄るので広く取る。
     private static let digitGap = 0.5, narrowDigitGap = 0.75
     /// 上・下・脈拍の段として採用する最低の判定の余裕。7 セグメントでない文字（普通の書体の数字や文章）を
-    /// 無理に数字へ当てはめた段は余裕がほとんどない（実機の写真は 0.06 以上、誤読は 0.03 以下だった）。
-    static let minimumMargin = 0.05
+    /// 無理に数字へ当てはめた段は余裕が小さい（実機の写真は 0.15 以上、誤読は 0.08 以下だった）。
+    static let minimumMargin = 0.1
+    /// 傾きを直して読み直す範囲（度）。これより小さい傾きはそのまま読める。
+    private static let minimumTiltDegrees = 3.0, maximumTiltDegrees = 25.0
+    /// 1 桁ぶんの塊の幅の上限（高さに対する割合）。斜体や遠近で広がるぶんを見込む。
+    private static let maximumDigitAspect = 1.0
+    /// 「1」の左にこの濃さ（縦棒に対する割合）の行があれば、横棒の跡とみなす。
+    private static let barTraceLevel = 0.4
+    /// 斜体では隣り合う桁の外接する四角が横に重なる。重なりの上限（数字の高さに対する割合）。
+    private static let digitOverlap = 0.2
+    /// 1 つの段の中で、「1」以外の桁の幅はほぼ同じ。いちばん広い桁といちばん狭い桁の比の上限
+    /// （くっついた 2 桁を 1 桁として読まないため）。
+    private static let maximumWidthRatio = 1.3
     /// 幅がこれより狭い塊は「1」。
     private static let narrowAspect = 0.42
 
@@ -85,21 +123,26 @@ enum SegmentDisplayReader {
     /// すべての段階で読めた段を返す（同じ段が複数の段階で見つかることがある）。
     static func rows(in image: GrayImage) -> [Row] {
         guard image.width >= 40, image.height >= 40 else { return [] }
-        // いちばん大きい段階の画像を作り、それより小さい段階はそこから縮小する。
         let base = Plane(image).resized(longSide: levels[0])
-        var found: [Row] = []
+        return scan(base, ratio: Double(base.width) / Double(image.width)).rows
+    }
+
+    /// すべての段階で段を探す。`ratio` は元の画像に対する `base` の縮小率。
+    static func scan(_ base: Plane, ratio: Double) -> (rows: [Row], tilts: [Tilt]) {
+        var rows: [Row] = [], tilts: [Tilt] = []
         for level in levels {
             let longSide = max(base.width, base.height)
             if Double(level) > Double(longSide) * 1.05 { continue }
             let plane = base.resized(longSide: level)
-            let ratio = Double(plane.width) / Double(image.width)
-            found += rows(at: plane, ratio: ratio)
+            let found = self.rows(at: plane, ratio: ratio * Double(plane.width) / Double(base.width))
+            rows += found.rows
+            tilts += found.tilts
         }
-        return found
+        return (rows, tilts)
     }
 
     /// 縮小した 1 段階の画像から段を探す。`ratio` は元の画像に対する縮小率。
-    static func rows(at gray: Plane, ratio: Double) -> [Row] {
+    static func rows(at gray: Plane, ratio: Double) -> (rows: [Row], tilts: [Tilt]) {
         let ink = inkMap(gray)
         let window = Int(bandMax * 2.5) | 1
         let localMax = ink.extreme(before: window / 2, after: window / 2, takeMax: true)
@@ -109,11 +152,9 @@ enum SegmentDisplayReader {
             if Double(ink.pixels[i]) > threshold { mask.pixels[i] = 255 }
         }
         mask = removeLongLines(mask, minLength: Int(bandMax * 1.3))
-        // セグメントのすき間を少しだけつなぐ（縦 3・横 2）。
+        // セグメントのすき間を縦にだけ少しつなぐ（横につなぐと、間隔の狭い隣の桁とくっつく）。
         let merged = mask
-            .extreme(before: 0, after: 1, takeMax: true, vertical: false)
             .extreme(before: 1, after: 1, takeMax: true, vertical: true)
-            .extreme(before: 1, after: 0, takeMax: false, vertical: false)
             .extreme(before: 1, after: 1, takeMax: false, vertical: true)
         let raw = SevenSegmentReader.connectedComponents(GrayImage(width: merged.width, height: merged.height, pixels: merged.pixels))
             .map { Box(x: $0.minX, y: $0.minY, w: $0.width, h: $0.height) }
@@ -128,6 +169,7 @@ enum SegmentDisplayReader {
                 continue
             }
             // 端に余分な塊（アイコン・時刻・枠線）が付いた並び：両端から 2〜3 個を取り出して読む。
+            let before = out.count
             var seen: [[Box]] = []
             for count in [3, 2] where chain.count > count {
                 for start in Set([0, chain.count - count]).sorted() {
@@ -140,8 +182,43 @@ enum SegmentDisplayReader {
                     }
                 }
             }
+            // 数字らしい並びなのに読めなかったものも、場所だけ残す（`choose` が段を飛ばさないようにするため）。
+            if out.count == before { out.append(unreadRow(chain, ratio: ratio)) }
         }
-        return out
+        return (out, tilts(of: raw, ratio: ratio))
+    }
+
+    /// 数字らしい大きさの塊が、斜めに並んでいるところを探す（段の傾きの手がかり）。
+    private static func tilts(of raw: [Box], ratio: Double) -> [Tilt] {
+        let digits = raw
+            .filter { Double($0.h) >= bandMin && Double($0.h) <= bandMax * 1.1
+                && Double($0.w) >= 0.4 * Double($0.h) && Double($0.w) <= 1.15 * Double($0.h) }
+            .sorted { ($0.x, $0.y) < ($1.x, $1.y) }
+        var used = [Bool](repeating: false, count: digits.count)
+        var found: [Tilt] = []
+        for i in digits.indices where !used[i] {
+            var chain = [digits[i]]
+            used[i] = true
+            var j = i + 1
+            while j < digits.count, chain.count < 4 {
+                defer { j += 1 }
+                let last = chain[chain.count - 1], c = digits[j], height = Double(last.h)
+                if used[j] || c.x <= last.x { continue }
+                let gap = Double(c.x - last.maxX)
+                if gap > digitGap * height { break }
+                guard gap >= -0.25 * height, Double(c.h) >= 0.8 * height, Double(c.h) <= 1.25 * height,
+                      abs(Double(c.y + c.maxY - last.y - last.maxY)) / 2 <= 0.4 * height else { continue }
+                chain.append(c)
+                used[j] = true
+            }
+            guard chain.count >= 2, let first = chain.first, let last = chain.last else { continue }
+            let dx = Double(last.x + last.maxX - first.x - first.maxX) / 2
+            let dy = Double(last.y + last.maxY - first.y - first.maxY) / 2
+            guard dx > 0 else { continue }
+            let height = Double(chain.map(\.h).max() ?? 0) / ratio
+            found.append(Tilt(slope: dy / dx, weight: height * Double(chain.count)))
+        }
+        return found
     }
 
     // MARK: - 塊
@@ -191,7 +268,7 @@ enum SegmentDisplayReader {
             }
         }
         return joinVerticalPieces(pieces)
-            .filter { Double($0.h) >= bandMin * 0.5 && Double($0.h) <= bandMax * 1.1 && $0.w >= 2 && Double($0.w) <= 0.85 * Double($0.h) }
+            .filter { Double($0.h) >= bandMin * 0.5 && Double($0.h) <= bandMax * 1.1 && $0.w >= 2 && Double($0.w) <= maximumDigitAspect * Double($0.h) }
             .sorted { ($0.x, $0.y) < ($1.x, $1.y) }
     }
 
@@ -292,7 +369,7 @@ enum SegmentDisplayReader {
                     if used[j] || c.x <= last.x { continue }
                     let gap = Double(c.x - last.maxX)
                     if gap > narrowDigitGap * referenceHeight { break }   // 左から順なので、これより先はもっと遠い
-                    if gap < -2 { continue }
+                    if gap < -digitOverlap * referenceHeight { continue }
                     let shared = Double(min(bottom, c.maxY) - max(top, c.y))
                     if shared < 0.7 * min(Double(c.h), referenceHeight) { continue }
                     if Double(c.h) < 0.8 * referenceHeight || Double(c.h) > 1.25 * referenceHeight { continue }
@@ -319,7 +396,7 @@ enum SegmentDisplayReader {
             let slope = Double(second.maxY - first.maxY) / Double(max(1, second.x - first.x))
             for (j, c) in blobs.enumerated() where !used[j] {
                 let gap = Double(first.x - c.maxX)
-                guard gap >= 0, gap <= digitGap * referenceHeight, c.isNarrow,
+                guard gap >= -digitOverlap * referenceHeight, gap <= digitGap * referenceHeight, c.isNarrow, c.x < first.x,
                       Double(c.h) >= 0.5 * referenceHeight, Double(c.h) <= 1.25 * referenceHeight else { continue }
                 let shift = slope * Double(c.maxX - first.maxX)
                 guard abs(Double(c.maxY) - (Double(first.maxY) + shift)) <= 0.2 * referenceHeight,
@@ -334,37 +411,36 @@ enum SegmentDisplayReader {
 
     // MARK: - 数字の判定
 
+    /// 試す斜体の傾き（上へ行くほど右へずれる量。高さに対する割合）。
+    private static let shears = stride(from: -0.2, through: 0.25, by: 0.05).map { ($0 * 100).rounded() / 100 }
+
     /// 並びを数字として読む。読めない桁があれば nil。
     private static func readRow(_ chain: [Box], mask: Plane, ink: Plane, ratio: Double) -> Row? {
-        // 斜体の補正：桁の幅の合計がいちばん小さくなる傾きを選ぶ。
-        var bestShear = 0.0
-        var bestWidth: Int?
-        for shear in [-0.1, 0.0, 0.1, 0.2] {
-            var total = 0
-            for box in chain {
-                let range = Cell(mask, box, shear: shear).inkColumns
-                total += range.count
-            }
-            if bestWidth == nil || Double(total) < Double(bestWidth!) - 0.5 {
-                bestShear = shear
-                bestWidth = total
-            }
-        }
         // 点灯していないセグメントがうっすら写ることがある。段の中で極端に薄い桁は数字として扱わない。
         let strengths = chain.map { percentile90(ink, $0) }
         guard let strongest = strengths.max(), let weakest = strengths.min(), weakest >= 0.45 * strongest else { return nil }
 
+        // 「1」とみなす細い塊は、左側に横棒の跡がないことを確かめる
+        // （横棒が薄くて写らなかった「3」や「7」を「1」と読まないため）。
+        for (index, box) in chain.enumerated() where box.isNarrow {
+            let limit = index > 0 ? chain[index - 1].maxX : 0
+            if hasBarTraces(leftOf: box, limit: limit, ink: ink) { return nil }
+        }
+
+        guard let digits = digitCells(chain, mask: mask, ink: ink) else { return nil }
+        let widths = digits.map(\.mask.width).filter { Double($0) >= narrowAspect * Double(chain.map(\.h).max()!) }
+        if let widest = widths.max(), let narrowest = widths.min(), Double(widest) > maximumWidthRatio * Double(narrowest) {
+            return nil
+        }
         var text = ""
         var margin = 1.0
-        for box in chain {
-            let maskCell = Cell(mask, box, shear: bestShear)
-            let columns = maskCell.inkColumns
-            let inkCell = Cell(ink, box, shear: bestShear)
-            let narrow = Double(columns.count) < narrowAspect * Double(box.h)
-            guard let (digit, digitMargin) = classify(ink: inkCell, mask: maskCell, columns: columns, narrow: narrow) else {
+        for digit in digits {
+            let columns = 0..<digit.mask.width
+            let narrow = Double(digit.mask.width) < narrowAspect * Double(digit.mask.height)
+            guard let (value, digitMargin) = classify(ink: digit.ink, mask: digit.mask, columns: columns, narrow: narrow) else {
                 return nil
             }
-            text += String(digit)
+            text += String(value)
             margin = min(margin, digitMargin)
         }
         if chain.count < 3, text.allSatisfy({ $0 == "1" }) { return nil }   // 「11」は枠線や目盛りの見間違いが多い
@@ -378,6 +454,79 @@ enum SegmentDisplayReader {
             margin: margin,
             isPartial: false
         )
+    }
+
+    /// 読めなかった並び。数字は空で、場所と大きさだけを持つ。
+    private static func unreadRow(_ chain: [Box], ratio: Double) -> Row {
+        let x0 = chain.map(\.x).min()!, y0 = chain.map(\.y).min()!
+        let x1 = chain.map(\.maxX).max()!, y1 = chain.map(\.maxY).max()!
+        return Row(
+            text: "",
+            box: PixelRect(x: Double(x0) / ratio, y: Double(y0) / ratio, width: Double(x1 - x0) / ratio, height: Double(y1 - y0) / ratio),
+            digitHeight: Double(chain.map(\.h).max()!) / ratio,
+            margin: 0,
+            isPartial: false
+        )
+    }
+
+    /// 並びを 1 桁ずつの切り出しにする。
+    ///
+    /// 斜体や遠近で数字が傾いていると、隣り合う桁の外接する四角が重なり、四角で切ると隣の桁の線が混じる。
+    /// そこで並び全体をまとめて傾け直し、画素のない列で桁を分ける。傾きは、画素のある列がいちばん少なくなるものを選ぶ。
+    /// 桁の数が合わないとき（桁の中に切れ目がある、桁どうしがつながっている）は、塊ごとの四角で切る。
+    private static func digitCells(_ chain: [Box], mask: Plane, ink: Plane) -> [(mask: Cell, ink: Cell)]? {
+        let x0 = chain.map(\.x).min()!, y0 = chain.map(\.y).min()!
+        let x1 = chain.map(\.maxX).max()!, y1 = chain.map(\.maxY).max()!
+        let strip = Box(x: x0, y: y0, w: x1 - x0, h: y1 - y0)
+
+        // 縦の線がまっすぐ立つと、列ごとの画素の数が鋭い山になる（二乗の和が大きくなる）。その傾きを選ぶ。
+        // 同点なら傾きの小さいほうにする。
+        var best: (shear: Double, cell: Cell, sharpness: Int)?
+        for shear in shears.sorted(by: { abs($0) < abs($1) }) {
+            let cell = Cell(mask, strip, shear: shear)
+            let sharpness = cell.columnSharpness
+            if best == nil || sharpness > best!.sharpness { best = (shear, cell, sharpness) }
+        }
+        guard let best else { return nil }
+        let runs = best.cell.columnRuns
+        if runs.count == chain.count {
+            let inkStrip = Cell(ink, strip, shear: best.shear)
+            return runs.map { columns in
+                let rows = best.cell.inkRows(in: columns)
+                return (best.cell.cropped(columns: columns, rows: rows), inkStrip.cropped(columns: columns, rows: rows))
+            }
+        }
+
+        // 塊ごとに切る。
+        let bestShear = best.shear
+        return chain.map { box in
+            let maskCell = Cell(mask, box, shear: bestShear)
+            let columns = maskCell.inkColumns, rows = 0..<maskCell.height
+            return (maskCell.cropped(columns: columns, rows: rows), Cell(ink, box, shear: bestShear).cropped(columns: columns, rows: rows))
+        }
+    }
+
+    /// 細い塊のすぐ左に、横棒らしい濃さの行があるか（上・中・下のどれか）。
+    private static func hasBarTraces(leftOf box: Box, limit: Int, ink: Plane) -> Bool {
+        let left = max(limit, box.x - Int(0.45 * Double(box.h)), 0)
+        guard box.x - left >= 3 else { return false }
+        // 縦棒の濃さ：塊の中でいちばん濃い列の平均。
+        var stroke = 0.0
+        for x in box.x..<box.maxX {
+            var sum = 0
+            for y in box.y..<box.maxY { sum += Int(ink.pixels[y * ink.width + x]) }
+            stroke = max(stroke, Double(sum) / Double(box.h))
+        }
+        guard stroke > 0 else { return false }
+        for (from, to) in [(0.0, 0.2), (0.38, 0.62), (0.8, 1.0)] {
+            let top = box.y + Int(from * Double(box.h)), bottom = min(box.maxY, box.y + max(Int(to * Double(box.h)), Int(from * Double(box.h)) + 1))
+            for y in top..<bottom {
+                var sum = 0
+                for x in left..<box.x { sum += Int(ink.pixels[y * ink.width + x]) }
+                if Double(sum) / Double(box.x - left) >= barTraceLevel * stroke { return true }
+            }
+        }
+        return false
     }
 
     /// 1 桁ぶんの切り出し（斜体をまっすぐにしたもの）。
@@ -398,6 +547,63 @@ enum SegmentDisplayReader {
                 let target = y * width + pad + shift
                 for x in 0..<box.w { values[target + x] = plane.pixels[source + x] }
             }
+        }
+
+        init(width: Int, height: Int, values: [UInt8]) {
+            self.width = width
+            self.height = height
+            self.values = values
+        }
+
+        func cropped(columns: Range<Int>, rows: Range<Int>) -> Cell {
+            var out = [UInt8]()
+            out.reserveCapacity(columns.count * rows.count)
+            for y in rows { out.append(contentsOf: values[(y * width + columns.lowerBound)..<(y * width + columns.upperBound)]) }
+            return Cell(width: columns.count, height: rows.count, values: out)
+        }
+
+        /// 列ごとの画素の数の二乗の和。縦の線がまっすぐ立っているほど大きい。
+        var columnSharpness: Int {
+            var total = 0
+            for x in 0..<width {
+                var count = 0
+                for y in 0..<height where values[y * width + x] > 0 { count += 1 }
+                total += count * count
+            }
+            return total
+        }
+
+        /// 画素のある列が続く区間（左から）。
+        var columnRuns: [Range<Int>] {
+            var runs: [Range<Int>] = []
+            var start: Int?
+            for x in 0...width {
+                var any = false
+                if x < width {
+                    for y in 0..<height where values[y * width + x] > 0 { any = true; break }
+                }
+                if any, start == nil { start = x }
+                if !any, let from = start {
+                    runs.append(from..<x)
+                    start = nil
+                }
+            }
+            return runs
+        }
+
+        /// 列の範囲の中で、画素のある行の範囲。
+        func inkRows(in columns: Range<Int>) -> Range<Int> {
+            var first: Int?, last = 0
+            for y in 0..<height {
+                var any = false
+                for x in columns where values[y * width + x] > 0 { any = true; break }
+                if any {
+                    if first == nil { first = y }
+                    last = y
+                }
+            }
+            guard let start = first else { return 0..<height }
+            return start..<(last + 1)
         }
 
         /// 画素のある列の範囲。
@@ -501,8 +707,8 @@ enum SegmentDisplayReader {
                 let systolic = upper.value, diastolic = lower.value
                 guard (60...280).contains(systolic), (30...180).contains(diastolic), systolic > diastolic else { continue }
                 // 上にもう 1 段、同じ大きさの段があるなら、この組の上の段は「上の血圧」ではない
-                // （先頭の「1」を読み落とした段を飛ばして、下の血圧と脈拍を上下と取り違えないため）。
-                if rows.contains(where: { $0 != upper && $0 != lower && isStacked($0, upper) }) { continue }
+                // （先頭の「1」を読み落とした段や、読めなかった段を飛ばして、下の血圧と脈拍を上下と取り違えないため）。
+                if rows.contains(where: { $0 != upper && $0 != lower && isDirectlyAbove($0, upper) }) { continue }
                 var score = (upper.digitHeight + lower.digitHeight) / 2 * quality(upper) * quality(lower)
                 if (90...200).contains(systolic) { score *= 1.15 }
                 if (50...110).contains(diastolic) { score *= 1.15 }
@@ -532,12 +738,25 @@ enum SegmentDisplayReader {
 
     /// `upper` のすぐ下に、同じ大きさで右端のそろった `lower` がある。
     private static func isStacked(_ upper: Row, _ lower: Row) -> Bool {
+        guard isBelow(upper, lower) else { return false }
+        let height = (upper.digitHeight + lower.digitHeight) / 2
+        return abs(upper.box.maxX - lower.box.maxX) <= 0.9 * height
+    }
+
+    /// `upper` のすぐ下に、同じ大きさで横の位置が重なる `lower` がある（右端はそろっていなくてよい。
+    /// 読めなかった段は一部の桁しか含まないことがあるため）。
+    private static func isDirectlyAbove(_ upper: Row, _ lower: Row) -> Bool {
+        guard isBelow(upper, lower) else { return false }
+        let shared = min(upper.box.maxX, lower.box.maxX) - max(upper.box.x, lower.box.x)
+        return shared >= 0.3 * min(upper.box.width, lower.box.width)
+    }
+
+    /// `lower` が `upper` のすぐ下にあり、数字の大きさがほぼ同じ。
+    private static func isBelow(_ upper: Row, _ lower: Row) -> Bool {
         guard upper != lower, overlap(upper, lower) <= 0.1 else { return false }
         guard lower.box.y > upper.box.y + 0.6 * upper.box.height,
               lower.box.y - upper.box.maxY <= 0.9 * upper.box.height else { return false }
-        guard min(upper.digitHeight, lower.digitHeight) / max(upper.digitHeight, lower.digitHeight) >= 0.78 else { return false }
-        let height = (upper.digitHeight + lower.digitHeight) / 2
-        return abs(upper.box.maxX - lower.box.maxX) <= 0.9 * height
+        return min(upper.digitHeight, lower.digitHeight) / max(upper.digitHeight, lower.digitHeight) >= 0.78
     }
 
     private static func overlap(_ a: Row, _ b: Row) -> Double {
@@ -623,6 +842,33 @@ enum SegmentDisplayReader {
                 }
                 return taps
             }
+        }
+
+        /// 中心のまわりに回した画像を作る（大きさは同じ。はみ出す部分は端の画素で埋める）。
+        /// 元の画像で「右へ進むと `angle` だけ下がる」向きが、水平になる。
+        func rotated(byRadians angle: Double) -> Plane {
+            var out = self
+            let cosine = cos(angle), sine = sin(angle)
+            let centerX = Double(width - 1) / 2, centerY = Double(height - 1) / 2
+            pixels.withUnsafeBufferPointer { source in
+                out.pixels.withUnsafeMutableBufferPointer { target in
+                    for y in 0..<height {
+                        let dy = Double(y) - centerY
+                        for x in 0..<width {
+                            let dx = Double(x) - centerX
+                            let sx = min(max(centerX + dx * cosine - dy * sine, 0), Double(width - 1))
+                            let sy = min(max(centerY + dx * sine + dy * cosine, 0), Double(height - 1))
+                            let x0 = Int(sx), y0 = Int(sy)
+                            let x1 = min(x0 + 1, width - 1), y1 = min(y0 + 1, height - 1)
+                            let fx = sx - Double(x0), fy = sy - Double(y0)
+                            let top = Double(source[y0 * width + x0]) * (1 - fx) + Double(source[y0 * width + x1]) * fx
+                            let bottom = Double(source[y1 * width + x0]) * (1 - fx) + Double(source[y1 * width + x1]) * fx
+                            target[y * width + x] = UInt8((top * (1 - fy) + bottom * fy).rounded())
+                        }
+                    }
+                }
+            }
+            return out
         }
 
         /// 窓（手前 `before` 画素〜先 `after` 画素）の中の最大値または最小値。画像の外は数えない。
@@ -746,15 +992,15 @@ enum SegmentDisplayReader {
 extension BPParseResult {
     /// 液晶の数字の形と並びから読んだ結果。
     ///
-    /// 確度は、印字ラベルつきで文字認識がはっきり読めた場合（0.9 以上）より低く、
-    /// 文字認識があやふやな場合（0.8 前後以下）より高くしている。7 セグメントの数字は文字認識の誤読が多く、
-    /// 食い違ったときは形から読んだほうが当たりやすいため。脈拍まで読めれば 3 段の並びがそろっているので少し上げ、
-    /// 点灯・消灯の判定がきわどい桁があれば下げる。
+    /// 確度は、上・下・脈拍の 3 段がそろえば 0.9。印字ラベルつきで文字認識が 3 つともはっきり読めた場合（0.95）より
+    /// 低く、文字認識があやふやな場合（0.85 前後以下）より高い。7 セグメントの数字は文字認識の誤読が多く
+    /// （数字を読めずに、近くに印字された目盛りの数字を値として拾うこともある）、食い違ったときは形から読んだほうが
+    /// 当たりやすいため。脈拍が読めないとき、点灯・消灯の判定がきわどい桁があるときは下げる。
     init(_ reading: SegmentDisplayReader.Reading) {
-        var confidence = 0.8
+        var confidence = 0.82
         var reasons = ["液晶の数字の形から読み取りました"]
         if reading.pulse != nil {
-            confidence += 0.05
+            confidence += 0.08
             reasons.append("脈拍は位置から推定しました")
         }
         if reading.margin < 0.12 {
