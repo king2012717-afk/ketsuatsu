@@ -10,8 +10,9 @@ import Vision
 ///
 /// 1. 元の写真をそのまま読む（2 番目以降の認識候補も使う）
 /// 2. 本体に印字された SYS／DIA／PULSE などを手がかりに、7 セグメントの数字を直接読む
-/// 3. ここまでで 2 つの読み方が一致しなければ、セグメントをつないだ画像で読み直す
-/// 4. それでも一致しなければ、コントラストを強めた画像で読み直す
+/// 3. 印字に頼らず、液晶の数字の形と並びだけから読む（印字が右にある・液晶の中にある・日本語の機種など）
+/// 4. ここまでで 2 つの読み方が一致しなければ、セグメントをつないだ画像で読み直す
+/// 5. それでも一致しなければ、コントラストを強めた画像で読み直す
 ///
 /// 一致した時点でやめるので、読みやすい写真ほど早く終わる。
 enum BPImageRecognizer {
@@ -64,16 +65,22 @@ enum BPImageRecognizer {
             }
         }
 
-        // 2. 印字ラベルを手がかりに 7 セグメントを直接読む
-        let labels = BPTextParser.printedLabelItems(in: rawItems)
-        if !labels.isEmpty, let gray = GrayImage(cgImage: upright) {
-            let digits = SevenSegmentReader.read(gray, labelBoxes: labels.map(\.boundingBox))
-            if !digits.isEmpty {
-                results.append(parse(labels + digits))
+        if let gray = GrayImage(cgImage: upright) {
+            // 2. 印字ラベルを手がかりに 7 セグメントを直接読む
+            let labels = BPTextParser.printedLabelItems(in: rawItems)
+            if !labels.isEmpty {
+                let digits = SevenSegmentReader.read(gray, labelBoxes: labels.map(\.boundingBox))
+                if !digits.isEmpty {
+                    results.append(parse(labels + digits))
+                }
+            }
+            // 3. 印字に頼らず、数字の形と並びから読む
+            if let reading = SegmentDisplayReader.read(gray) {
+                results.append(BPParseResult(reading))
             }
         }
 
-        // 3〜4. 一致するまで、加工した画像で読み直す
+        // 4〜5. 一致するまで、加工した画像で読み直す
         let variants: [(CGImage) -> CGImage?] = [joinSegments, enhanceForSegmentDisplay]
         for variant in variants {
             if BPReadingCombiner.hasAgreement(results) { break }
