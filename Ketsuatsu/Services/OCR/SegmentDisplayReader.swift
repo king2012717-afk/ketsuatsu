@@ -997,14 +997,16 @@ extension BPParseResult {
     /// （数字を読めずに、近くに印字された目盛りの数字を値として拾うこともある）、食い違ったときは形から読んだほうが
     /// 当たりやすいため。脈拍が読めないとき、点灯・消灯の判定がきわどい桁があるときは下げる。
     init(_ reading: SegmentDisplayReader.Reading) {
-        var confidence = 0.82
+        // 足し算で作ると誤差で 0.9 にわずかに届かないことがある（0.82 + 0.08 = 0.8999…）。
+        // `BPReadingCombiner.shapeTrustThreshold` と比べる値なので、段階ごとの値をそのまま入れる。
+        let isClear = reading.margin >= 0.12
+        let confidence: Double
         var reasons = ["液晶の数字の形から読み取りました"]
         if reading.pulse != nil {
-            confidence += 0.08
+            confidence = isClear ? BPReadingCombiner.shapeTrustThreshold : 0.8
             reasons.append("脈拍は位置から推定しました")
-        }
-        if reading.margin < 0.12 {
-            confidence -= 0.1
+        } else {
+            confidence = isClear ? 0.82 : 0.72
         }
         self.init(
             systolic: reading.systolic,

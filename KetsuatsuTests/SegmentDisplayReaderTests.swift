@@ -331,6 +331,25 @@ final class SegmentDisplayReaderTests: XCTestCase {
         XCTAssertLessThan(borderline.confidence, 0.85)
     }
 
+    /// 形から 3 段ともはっきり読めた結果は、文字認識が同じ誤りを繰り返しても優先される
+    /// （確度がしきい値にちょうど届くこと。足し算の誤差で届かなかったことがある）。
+    func testClearShapeReadingIsPreferredOverRepeatedTextMisreading() {
+        let shape = BPParseResult(SegmentDisplayReader.Reading(systolic: 120, diastolic: 70, pulse: 60, margin: 0.25))
+        let misread = BPParseResult(systolic: 120, diastolic: 85, pulse: 60, confidence: 0.83, explanation: "")
+
+        XCTAssertGreaterThanOrEqual(shape.confidence, BPReadingCombiner.shapeTrustThreshold)
+        let preferred = BPReadingCombiner.preferringShapeReading(shape, over: [misread, misread])
+        XCTAssertEqual(preferred?.systolic, 120)
+        XCTAssertEqual(preferred?.diastolic, 70)
+        XCTAssertEqual(preferred?.pulse, 60)
+
+        // 脈拍が読めない・判定がきわどいときは優先しない。
+        let withoutPulse = BPParseResult(SegmentDisplayReader.Reading(systolic: 120, diastolic: 70, pulse: nil, margin: 0.25))
+        let borderline = BPParseResult(SegmentDisplayReader.Reading(systolic: 120, diastolic: 70, pulse: 60, margin: 0.11))
+        XCTAssertNil(BPReadingCombiner.preferringShapeReading(withoutPulse, over: [misread]))
+        XCTAssertNil(BPReadingCombiner.preferringShapeReading(borderline, over: [misread]))
+    }
+
     /// 文字認識が誤読しても、形から読んだ値と読み直しの値が一致すればそちらを採用する。
     func testCombinerPrefersAgreementWithShapeReading() {
         let misread = BPParseResult(systolic: 181, diastolic: 88, pulse: nil, confidence: 0.9, explanation: "")
