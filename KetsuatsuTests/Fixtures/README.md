@@ -4,12 +4,15 @@
 | --- | --- | --- |
 | `boots_display_131_88_77.jpg` | 上腕式血圧計（Boots Pharmaceuticals）の表示。SYS 131 / DIA 88 / PULSE 77 | [happy0/bpm-ocr](https://github.com/happy0/bpm-ocr) の `src/test_resources/example_top_down.jpg` から表示部分だけを切り出し |
 
-元の画像は MIT License で公開されています。
+| `backlit_display_126_81_81.jpg` | 手首式血圧計の表示（バックライトつき。SYS／DIA が液晶の中に表示され、上に時計がある）。SYS 126 / DIA 81 / PULSE 81 | [chakib-belgaid/bp-tracker](https://github.com/chakib-belgaid/bp-tracker) の `test/fixtures/126-81-81-a.jpg` を長辺 900 画素に縮小 |
+
+元の画像はどちらも MIT License で公開されています（著作権表示は下の 2 つ。本文は同じ）。
 
 ```
 MIT License
 
 Copyright (c) 2025 Gordon Martin
+Copyright (c) 2026 Chakib Belgaid
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
