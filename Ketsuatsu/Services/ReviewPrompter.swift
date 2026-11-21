@@ -8,12 +8,18 @@ enum ReviewPrompter {
     /// 保存の画面が閉じるのを待つ時間（秒）。
     static let delay: Duration = .seconds(1.5)
 
+    /// 待っている間に保存が続いても、お願いを二重に予約しないための印。
+    private static var isPending = false
+
     static func requestIfAppropriate(completedEntries: Int, policy: ReviewPromptPolicy = ReviewPromptPolicy()) {
-        guard policy.shouldRequest(completedEntries: completedEntries) else { return }
-        policy.markRequested()
+        guard !isPending, policy.shouldRequest(completedEntries: completedEntries) else { return }
+        isPending = true
         Task { @MainActor in
+            defer { isPending = false }
             try? await Task.sleep(for: delay)
+            // 待っている間にアプリが裏に回った・画面がロックされたときは、お願いしたことにしない（次の保存でまた判定する）
             guard let scene = activeScene() else { return }
+            policy.markRequested()
             AppStore.requestReview(in: scene)
         }
     }
