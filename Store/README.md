@@ -23,7 +23,7 @@ Team は Yutarou Nagano（`JS7SYSHC3S`）、署名は Automatic に設定済み�
 | 項目 | 値 | 場所 |
 | --- | --- | --- |
 | 表示名 | うちの血圧記録 | `Config/Info.plist` |
-| バージョン | 1.3（配信中の 1.2 の次。同意画面と ATT、写真読み取りの改善、アクセス解析） | `MARKETING_VERSION` |
+| バージョン | 1.4（配信中の 1.3 の次。評価のお願い、ストアのサブタイトル・キーワード・1枚目のスクリーンショットの見直し） | `MARKETING_VERSION` |
 | ビルド番号 | 1（バージョンを上げたので 1 から。仕様書 3-2） | `CURRENT_PROJECT_VERSION` |
 | 対応端末 | iPhone のみ | `TARGETED_DEVICE_FAMILY = 1` |
 | 最低 iOS | 17.0 | `IPHONEOS_DEPLOYMENT_TARGET` |
