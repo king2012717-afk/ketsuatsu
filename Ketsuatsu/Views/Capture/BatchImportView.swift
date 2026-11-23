@@ -10,6 +10,9 @@ struct BatchImportView: View {
 
     @State private var model: BatchImportModel
     @State private var editingItemID: UUID?
+    /// 端末に保存できなかった件数（0 でなければ、閉じる前に知らせる）。
+    @State private var unsavedCount = 0
+    @State private var showsSaveFailure = false
 
     init(photos: [PickedPhoto], defaultArm: MeasurementArm) {
         _model = State(initialValue: BatchImportModel(photos: photos, defaultArm: defaultArm))
@@ -57,6 +60,12 @@ struct BatchImportView: View {
                 await model.analyze()
             }
             .interactiveDismissDisabled(model.isSaving)
+            // 保存できなかった記録があるときは、黙って閉じずに知らせる（仕様書 4-2）。
+            .alert("保存できなかった記録があります", isPresented: $showsSaveFailure) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text(SaveFailureMessage.batch(unsavedCount: unsavedCount))
+            }
         }
     }
 
@@ -225,9 +234,15 @@ struct BatchImportView: View {
     }
 
     private func save() {
+        let selected = model.selectedCount
         Task {
-            await model.save(context: modelContext, settings: settings)
-            dismiss()
+            let saved = await model.save(context: modelContext, settings: settings)
+            if saved < selected {
+                unsavedCount = selected - saved
+                showsSaveFailure = true
+            } else {
+                dismiss()
+            }
         }
     }
 }

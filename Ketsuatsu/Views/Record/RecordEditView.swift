@@ -22,6 +22,7 @@ struct RecordEditView: View {
     @FocusState private var focus: RecordFormSections.Field?
     @State private var showsRecognizedText = false
     @State private var isSaving = false
+    @State private var showsSaveFailure = false
 
     init(mode: Mode, ocrResult: BPParseResult? = nil, recognizedLines: [String] = []) {
         self.mode = mode
@@ -68,6 +69,12 @@ struct RecordEditView: View {
                 Button("キャンセル", role: .cancel) {}
             } message: {
                 Text("削除すると元に戻せません。")
+            }
+            // 端末に保存できなかったときは、黙って閉じずに知らせる（仕様書 4-2）。
+            .alert("記録を保存できませんでした", isPresented: $showsSaveFailure) {
+                Button("OK") { dismiss() }
+            } message: {
+                Text(SaveFailureMessage.single)
             }
         }
         .interactiveDismissDisabled(isSaving)
@@ -150,7 +157,12 @@ struct RecordEditView: View {
         Task {
             switch mode {
             case .create:
-                await RecordService.create(from: draft, reading: ocrResult, context: modelContext, settings: settings)
+                let result = await RecordService.create(from: draft, reading: ocrResult, context: modelContext, settings: settings)
+                if let result, !result.persisted {
+                    isSaving = false
+                    showsSaveFailure = true
+                    return
+                }
             case .edit(let record):
                 await RecordService.update(record, with: draft, context: modelContext, settings: settings)
             }
