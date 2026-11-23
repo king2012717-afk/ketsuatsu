@@ -1013,7 +1013,8 @@ extension BPParseResult {
             diastolic: reading.diastolic,
             pulse: reading.pulse,
             confidence: confidence,
-            explanation: reasons.joined(separator: "・")
+            explanation: reasons.joined(separator: "・"),
+            reader: .shape
         )
     }
 }

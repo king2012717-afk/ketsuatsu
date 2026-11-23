@@ -126,7 +126,7 @@ final class BatchImportModel {
         isSaving = true
         defer { isSaving = false }
 
-        let drafts = items.filter { $0.isIncluded && $0.canSave }.map(\.draft)
-        return await RecordService.createBatch(from: drafts, context: context, settings: settings)
+        let entries = items.filter { $0.isIncluded && $0.canSave }.map { (draft: $0.draft, reading: $0.result) }
+        return await RecordService.createBatch(from: entries, context: context, settings: settings)
     }
 }

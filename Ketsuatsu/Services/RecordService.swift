@@ -15,23 +15,38 @@ enum RecordService {
 
     /// 1 件を記録する（手入力・写真 1 枚）。
     /// 分析イベントは、永続保存（`context.save()`）に成功した場合だけ送る。
+    /// - Parameter reading: 写真から読み取った結果（写真 1 枚のとき）。読み取りが合っていたかの計測に使う。
     @discardableResult
-    static func create(from draft: BPDraft, context: ModelContext, settings: AppSettings) async -> BPRecord? {
+    static func create(
+        from draft: BPDraft,
+        reading: BPParseResult? = nil,
+        context: ModelContext,
+        settings: AppSettings
+    ) async -> BPRecord? {
         guard let result = await insert(draft, context: context, settings: settings) else { return nil }
         if result.persisted {
+            if draft.source == .photo {
+                logPhotoReadingSaved(result.record, reading: reading, method: .photo)
+            }
             logEntryCompleted(method: draft.source == .photo ? .photo : .manual, persistedCount: 1)
         }
         return result.record
     }
 
     /// 写真のまとめて記録で、選ばれた記録を順に保存し、永続保存できた件数を返す。
-    /// 分析イベントは 1 回のまとめて記録につき 1 回だけ送る（件数は record_count）。
+    /// 完了のイベントは 1 回のまとめて記録につき 1 回だけ送る（件数は record_count）。
+    /// 読み取りが合っていたかのイベントは、保存できた写真 1 枚ごとに送る。
     @discardableResult
-    static func createBatch(from drafts: [BPDraft], context: ModelContext, settings: AppSettings) async -> Int {
+    static func createBatch(
+        from entries: [(draft: BPDraft, reading: BPParseResult?)],
+        context: ModelContext,
+        settings: AppSettings
+    ) async -> Int {
         var persistedCount = 0
-        for draft in drafts {
-            if let result = await insert(draft, context: context, settings: settings), result.persisted {
+        for entry in entries {
+            if let result = await insert(entry.draft, context: context, settings: settings), result.persisted {
                 persistedCount += 1
+                logPhotoReadingSaved(result.record, reading: entry.reading, method: .photoBatch)
             }
         }
         if persistedCount > 0 {
@@ -99,6 +114,18 @@ enum RecordService {
             predicate: #Predicate<BPRecord> { $0.sourceRaw != healthKitRaw }
         )
         return (try? context.fetchCount(descriptor)) ?? 0
+    }
+
+    /// 写真から読み取った記録について、読み取りが保存された値と合っていたかを送る。
+    /// 送るのは区分だけで、値は含めない（`PhotoReadingOutcome`）。
+    private static func logPhotoReadingSaved(_ record: BPRecord, reading: BPParseResult?, method: AppAnalytics.EntryMethod) {
+        let outcome = PhotoReadingOutcome(
+            result: reading,
+            systolic: record.systolic,
+            diastolic: record.diastolic,
+            pulse: record.pulse
+        )
+        AppAnalytics.photoReadingSaved(outcome, method: method)
     }
 
     /// 保存に成功した記録について、完了イベントと 3 件目の到達イベントを送る。

@@ -29,6 +29,15 @@ struct BPParseResult: Equatable, Sendable {
     var confidence: Double = 0
     /// 解析に使った根拠。デバッグと「読み取り結果の確認」画面での説明に使う。
     var explanation: String = ""
+    /// どの読み方で得た値か。
+    var reader: Reader = .text
+
+    enum Reader: String, Equatable, Sendable {
+        /// 文字認識（Vision）の結果を解析したもの
+        case text
+        /// 液晶の数字の形から読んだもの（`SegmentDisplayReader`）
+        case shape
+    }
 
     /// 血圧として記録できる最低限の情報がそろっているか。
     var hasBloodPressure: Bool { systolic != nil && diastolic != nil }

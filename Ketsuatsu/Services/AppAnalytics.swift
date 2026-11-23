@@ -32,6 +32,14 @@ enum AppAnalytics {
         AnalyticsService.mainActionCompleted(action: "blood_pressure_entry")
     }
 
+    /// 写真から読み取った記録が永続保存されたとき、読み取りが保存された値と合っていたかを送る（読み取り精度の計測）。
+    /// 送るのは区分だけで、血圧・脈拍の値、写真、読み取った文字は含めない。
+    static func photoReadingSaved(_ outcome: PhotoReadingOutcome, method: EntryMethod) {
+        var parameters: [String: Any] = outcome.analyticsParameters
+        parameters["entry_method"] = method.rawValue
+        AnalyticsService.log("photo_reading_saved", parameters: parameters)
+    }
+
     static func thirdEntryCompleted() {
         AnalyticsService.log("third_entry_completed")
     }
