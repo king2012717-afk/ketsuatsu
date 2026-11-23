@@ -22,6 +22,12 @@ final class LevelPlayBannerController: ObservableObject {
         guard !isReady, !isStarting, AdConfig.isConfigured else { return }
         isStarting = true
         #if DEBUG
+        // 仕様書 1-6：ビルド構成（Debug／Release）で広告を出し分けない。Debug でも本番の広告ユニットへ
+        // 要求が飛ぶので、動作確認は LevelPlay の Test devices に登録した端末でだけ行う。
+        // `setAdaptersDebug` はログを出すだけで、テスト広告になる保証ではない。
+        // 手順は docs/広告の動作確認手順.md。
+        print("[Ads] Debug ビルドでも本番の広告ユニットへ要求します。LevelPlay の Test devices に登録した端末でだけ確認し、広告には触れないでください（docs/広告の動作確認手順.md）")
+        print("[Ads] この端末の IDFV（Test devices に登録する値）: \(UIDevice.current.identifierForVendor?.uuidString ?? "取得できません")")
         LevelPlay.setAdaptersDebug(true)
         #endif
         let request = LPMInitRequestBuilder(appKey: AdConfig.appKey).build()
