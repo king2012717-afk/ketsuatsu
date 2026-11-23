@@ -21,3 +21,25 @@ struct AdRetryPolicy: Equatable, Sendable {
         attempts = 0
     }
 }
+
+/// 広告 SDK の初期化に失敗したあと、いつ再初期化してよいかを決める（仕様書 1-10：上限付きバックオフ）。
+///
+/// 再初期化は、アプリが前面に出たときにだけ試す（背面では試さない）。前回の失敗から
+/// `AdRetryPolicy.delays` の時間が空いていなければ見送り、上限回数に達したらそれ以上は試さない
+/// （アプリを起動し直すと数え直す）。
+struct AdInitializationRetry: Equatable, Sendable {
+    private(set) var failures = 0
+    private(set) var lastFailureAt: Date?
+
+    /// 初期化に失敗したときに呼ぶ。
+    mutating func recordFailure(at date: Date = Date()) {
+        failures += 1
+        lastFailureAt = date
+    }
+
+    /// いま再初期化してよいか。失敗していなければ false（初回の起動は別の経路で行う）。
+    func shouldRetry(at date: Date = Date()) -> Bool {
+        guard let lastFailureAt, failures > 0, failures <= AdRetryPolicy.delays.count else { return false }
+        return date.timeIntervalSince(lastFailureAt) >= AdRetryPolicy.delays[failures - 1]
+    }
+}

@@ -15,6 +15,8 @@ final class LevelPlayBannerController: ObservableObject {
 
     @Published private(set) var isReady = false
     private var isStarting = false
+    /// 初期化に失敗したあとの再初期化の間隔と上限（仕様書 1-10）。
+    private var initializationRetry = AdInitializationRetry()
 
     private init() {}
 
@@ -39,11 +41,19 @@ final class LevelPlayBannerController: ObservableObject {
                     #if DEBUG
                     print("[Ads] LevelPlay 初期化失敗: \(error.localizedDescription)")
                     #endif
+                    self.initializationRetry.recordFailure()
                     return
                 }
                 self.isReady = true
             }
         }
+    }
+
+    /// 初期化に失敗していたら、間隔と上限の範囲でもう一度初期化する。アプリが前面に出たときに呼ぶ
+    /// （圏外で失敗したまま、アプリを終了するまで広告が出ない状態にしないため）。
+    func retryIfInitializationFailed() {
+        guard !isReady, !isStarting, initializationRetry.shouldRetry() else { return }
+        start()
     }
 }
 
