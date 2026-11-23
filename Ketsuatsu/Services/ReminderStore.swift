@@ -18,6 +18,8 @@ final class ReminderStore {
 
     private let defaults: UserDefaults
     private let center: UNUserNotificationCenter
+    /// 通知の登録し直しを 1 つずつ順に行う（並行して走ると、消した時刻の通知が残ることがある）。
+    private let synchronizer = LatestOnlyRunner()
 
     init(defaults: UserDefaults = .standard, center: UNUserNotificationCenter = .current()) {
         self.defaults = defaults
@@ -45,7 +47,8 @@ final class ReminderStore {
         guard updated != schedule else { return }
         schedule = updated
         persist()
-        Task { await synchronize() }
+        // 操作した順に予約する。続けて操作したときは、最後の内容で登録し直す。
+        synchronizer.enqueue { [weak self] in await self?.rebuildNotifications() }
     }
 
     /// 初回起動時に既定のスケジュール（朝・昼・晩の 1 日 3 回）を用意する。
@@ -86,7 +89,16 @@ final class ReminderStore {
     }
 
     /// 登録済みの通知をすべて作り直す。
+    ///
+    /// 作り直しは 1 つずつ順に行う。素早く続けて操作したときに、前の作り直しの「追加」が
+    /// あとの作り直しの「削除」より後に動いて、消した・無効にした時刻の通知が残るのを防ぐ（仕様書 2-18）。
     func synchronize() async {
+        await synchronizer.run { [weak self] in await self?.rebuildNotifications() }
+    }
+
+    /// いまのスケジュールで、このアプリのリマインダーの通知を消してから登録し直す。
+    /// 直接呼ばず、`synchronize()` を通す。
+    private func rebuildNotifications() async {
         let pending = await center.pendingNotificationRequests()
         let identifiers = pending.map(\.identifier).filter { $0.hasPrefix(Self.notificationPrefix) }
         if !identifiers.isEmpty {

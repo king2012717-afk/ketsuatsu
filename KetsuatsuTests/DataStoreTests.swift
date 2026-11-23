@@ -2,7 +2,6 @@ import SwiftData
 import XCTest
 @testable import Ketsuatsu
 
-@MainActor
 final class DataStoreTests: XCTestCase {
 
     private struct OpenFailure: LocalizedError {
@@ -13,6 +12,7 @@ final class DataStoreTests: XCTestCase {
         try ModelContainer(for: BPRecord.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     }
 
+    @MainActor
     func testOpensPersistentStore() throws {
         let store = DataStore(open: { try self.inMemoryContainer() })
 
@@ -21,6 +21,7 @@ final class DataStoreTests: XCTestCase {
     }
 
     /// ストアを開けなかったときは、開けなかったことが分かる（黙ってメモリ上で動かさない）。
+    @MainActor
     func testReportsFailureInsteadOfSilentlyRunningInMemory() {
         let store = DataStore(open: { throw OpenFailure() })
 
@@ -29,6 +30,7 @@ final class DataStoreTests: XCTestCase {
     }
 
     /// 空き容量を空けたあとなどに、もう一度開ける。開けるまでは状態が変わらない。
+    @MainActor
     func testRetryRecoversWhenStoreOpens() throws {
         var shouldFail = true
         let store = DataStore(open: {
