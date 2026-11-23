@@ -1,6 +1,8 @@
+# 2026-11-24：費用削減のため手動実行のみ。ビルド確認は手元の Mac（xcodebuild）と Xcode Cloud で行う
 name: iOS build
 
 # 仕様書 2-14。yutaroulabs-spec の templates/ios.yml を元に、XcodeGen を使わないこのアプリ向けにした。
+# Mac の実行環境は 1 分が 10 分ぶんに数えられる。push・pull_request・schedule では動かさない。
 on:
   workflow_dispatch:
 
