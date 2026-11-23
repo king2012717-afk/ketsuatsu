@@ -150,7 +150,7 @@ struct RecordEditView: View {
         Task {
             switch mode {
             case .create:
-                await RecordService.create(from: draft, context: modelContext, settings: settings)
+                await RecordService.create(from: draft, reading: ocrResult, context: modelContext, settings: settings)
             case .edit(let record):
                 await RecordService.update(record, with: draft, context: modelContext, settings: settings)
             }

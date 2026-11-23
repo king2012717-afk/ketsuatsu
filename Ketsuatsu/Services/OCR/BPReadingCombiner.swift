@@ -18,6 +18,33 @@ enum BPReadingCombiner {
         return chosen
     }
 
+    /// 液晶の数字の形から読んだ結果（`shape`）を、ほかの読み方より優先してよければ、最終結果として返す。
+    ///
+    /// 文字認識は 7 セグメントの数字を読めないとき、近くに印字された目盛りの数字（「85」「135」など）を値として
+    /// 拾うことがある。読み直してもしばしば同じ誤りになるので、「複数の読み方で一致」だけでは防げない
+    /// （2026-11-21、上 120・下 70 の表示を 120／85 と読んだ）。形から読んだ結果は、上・下・脈拍の 3 段が
+    /// そろい、判定に余裕があるときだけ高い確度になるので、そのときは優先する。
+    ///
+    /// ただし、文字認識がラベルつきで 3 つの値をはっきり読み、違う値を出しているときは優先しない
+    /// （7 セグメントでない表示の機種。通常どおり読み比べる）。
+    static func preferringShapeReading(_ shape: BPParseResult, over others: [BPParseResult]) -> BPParseResult? {
+        guard shape.hasBloodPressure, shape.confidence >= shapeTrustThreshold else { return nil }
+        let pair = Pair(shape)
+        let complete = others.filter(\.hasBloodPressure)
+        if complete.contains(where: { Pair($0) != pair && $0.confidence >= strongTextThreshold }) { return nil }
+        var result = shape
+        if complete.contains(where: { Pair($0) == pair }) {
+            result.confidence = min(1.0, result.confidence + 0.05)
+            result.explanation += "・複数の読み方で一致しました"
+        }
+        return result
+    }
+
+    /// 形から読んだ結果を優先する確度（上・下・脈拍がそろい、判定に余裕があるときの値）。
+    static let shapeTrustThreshold = 0.9
+    /// 文字認識がラベルつきで 3 つの値をはっきり読めたとみなす確度。
+    static let strongTextThreshold = 0.93
+
     /// 2 つ以上の読み方で、上下の値が一致しているか（これ以上読み直す必要がないかの判断に使う）。
     static func hasAgreement(_ results: [BPParseResult]) -> Bool {
         let pairs = results.filter(\.hasBloodPressure).map(Pair.init)

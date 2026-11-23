@@ -33,7 +33,7 @@ v2 の共通部品（`AnalyticsProgress.swift` など）の実物は `book` リ�
 ## 送らない情報
 
 血圧値・脈拍・服薬の有無・メモ・写真・測定日時・ヘルスケアのデータ、およびそれらから計算した値（期間内の件数、平均、判定区分など）は**イベントにもパラメータにも入れない**。
-パラメータは「どの操作方法で行ったか」と、まとめて記録の件数だけに限る。ユーザー ID は設定しない。
+パラメータは「どの操作方法で行ったか」、まとめて記録の件数、写真の読み取りが保存された値と合っていたかの区分（後述）だけに限る。ユーザー ID は設定しない。
 ユーザープロパティは `had_data_at_start`（計測を始めた時点で記録があったか。`true` / `false`）だけを設定する。既存ユーザーを分析から分けるために使う。
 
 ## イベント一覧
@@ -44,6 +44,7 @@ v2 の共通部品（`AnalyticsProgress.swift` など）の実物は `book` リ�
 | `blood_pressure_entry_started` | 記録を始める操作をしたとき（「手で入力する」「手入力」を押した／写真を選び終えた） | `entry_method` | ボタン操作のハンドラから送る。画面の表示（`onAppear`）では送らない。編集では送らない |
 | `blood_pressure_entry_completed` | `context.save()` が成功した直後 | `entry_method`、まとめて記録のみ `record_count` | 保存に失敗したら送らない。まとめて記録は 1 回の操作で 1 回 |
 | `main_action_complete` | `blood_pressure_entry_completed` と同時 | `action = blood_pressure_entry` | 同上 |
+| `photo_reading_saved` | 写真から読み取った記録の `context.save()` が成功した直後（写真 1 枚ごと） | `entry_method`（`photo` / `photo_batch`）`read_result` `bp_match` `pulse_match` `reader` `confidence` | 保存に失敗したら送らない。編集では送らない。手入力では送らない |
 | `third_entry_completed` | アプリ内で保存に成功した記録が累計 3 件に達したとき | なし | 端末内の累計件数と送信済みフラグ（後述）。1 インストールにつき最大 1 回 |
 | `weekly_summary_viewed` | グラフの期間のチップで「1週間」を選んだとき | なし | 切り替えの操作 1 回につき 1 回。画面の表示・タブの再訪・再描画では送らない |
 | `recommended_app_impression` | 設定タブの「YutarouLabsのおすすめ」の各行の **半分以上** が画面に入ったとき | `source_app`（`ketsuatsu-record`）`destination_app` `placement` `campaign` | 同じ行はアプリが前面にいる間 1 回まで。背面に回ったら数え直す |
@@ -66,6 +67,33 @@ v2 の共通部品（`AnalyticsProgress.swift` など）の実物は `book` リ�
 - キャンセルで閉じた場合は started だけが残る（completed は送らない）。
 - カメラ／写真選択を途中でやめた（写真を選ばなかった）ときは started を送らない。
 - 写真を選んだあとに読み取り自体が失敗したときは、started だけが残る。「やり直す」で選び直すと、もう一度 started が送られる。
+
+### photo_reading_saved（読み取り精度の計測）
+
+「写真の読み取りが、実際に保存された値と合っていたか」を数える。読み取った値を手で直してから保存した割合が分かる。
+**送るのは下表の区分の名前だけ**で、血圧・脈拍の値、写真、読み取った文字は送らない（`Ketsuatsu/Services/OCR/PhotoReadingOutcome.swift`）。
+
+| パラメータ | 値 | 意味 |
+| --- | --- | --- |
+| `entry_method` | `photo` / `photo_batch` | 写真 1 枚か、まとめて記録か |
+| `read_result` | `full` / `bp_only` / `partial` / `none` | 読み取れた項目（上・下・脈拍／上・下だけ／一部だけ／何も読めず） |
+| `bp_match` | `true` / `false` | 読み取った上・下が、どちらもそのまま保存されたか。上・下を読めなかったときは `false` |
+| `pulse_match` | `true` / `false` / `not_read` | 読み取った脈拍がそのまま保存されたか。`not_read` は脈拍を読めなかった（そのあと手で入れたかどうかは区別しない。脈拍を記録したかどうかを送らないため） |
+| `reader` | `shape` / `text` | 採用した読み方。`shape` は液晶の数字の形から（`SegmentDisplayReader`）、`text` は文字認識（Vision）から |
+| `confidence` | `high` / `low` | 確度が 0.85 以上か（未満のときは画面に「値が正しいか確認してください」を出している） |
+
+見方：
+
+- **読み取りの正解率** ＝ `bp_match = true` の件数 ÷ `photo_reading_saved` の件数。`reader` で分ければ、どちらの読み方が当たっているかが分かる
+- **確度の付け方が妥当か** ＝ `confidence = high` の中の `bp_match = false` の割合（高いのに外れている）が小さいこと
+- **読めなかった割合** ＝ `read_result = none` または `partial` の割合
+- まとめて記録は、保存した写真 1 枚ごとに 1 回送る（`blood_pressure_entry_completed` は 1 回の操作で 1 回のまま）
+
+**範囲の限界**：
+
+- 保存された記録だけが対象。読み取り結果を見てキャンセルした・まとめて記録でチェックを外した写真は数えない（`blood_pressure_entry_started(photo)` と `completed(photo)` の差には表れる）
+- 値を直さずに保存した場合を「合っていた」と数える。誤りに気づかず保存した分は正解に入る
+- どの機種で外れたかは分からない（機種名や写真は送らない）
 
 ### weekly_summary_viewed の条件
 
@@ -136,8 +164,9 @@ YutarouLabs の各アプリで「主要な操作を終えた」ことを同じ�
 | 2 | 手入力 → 保存 | `blood_pressure_entry_started`(manual) → `blood_pressure_entry_completed`(manual) + `main_action_complete` |
 | 3 | 手入力 → キャンセル | `blood_pressure_entry_started`(manual) のみ |
 | 4 | 履歴から記録を開いて編集 → 保存 | なし |
-| 5 | 写真 1 枚 → 読み取り結果 → 保存 | started(photo) → completed(photo) + `main_action_complete` |
-| 6 | 写真を 3 枚まとめて → 2 枚だけ選んで保存 | started(photo_batch) → completed(photo_batch, record_count=2) + `main_action_complete` を各 1 回 |
+| 5 | 写真 1 枚 → 読み取り結果 → そのまま保存 | started(photo) → `photo_reading_saved`(photo, bp_match=true) → completed(photo) + `main_action_complete` |
+| 5b | 写真 1 枚 → 読み取り結果 → 上か下の値を直して保存 | 5 と同じで、`photo_reading_saved` の `bp_match` が `false` |
+| 6 | 写真を 3 枚まとめて → 2 枚だけ選んで保存 | started(photo_batch) → `photo_reading_saved`(photo_batch) を 2 回 → completed(photo_batch, record_count=2) + `main_action_complete` を各 1 回 |
 | 7 | 新規インストールで 3 件目を保存 | 3 件目の completed のあとに `third_entry_completed` を 1 回 |
 | 8 | 4 件目を保存／1 件削除して保存し直す／再起動して保存 | `third_entry_completed` は出ない |
 | 9 | 旧バージョン（Firebase 導入前）で 3 件以上記録 → 本バージョンに上書き → 記録 | `third_entry_completed` は出ない |
@@ -157,6 +186,7 @@ Xcode で ⌘U。
 
 - `KetsuatsuTests/EntryMilestoneTrackerTests.swift`：新規インストール・再起動・削除と再登録・既存ユーザーの引き継ぎ・まとめて記録の判定、基準値
 - `KetsuatsuTests/ImpressionTrackerTests.swift`：半分以上の表示、スクロールで戻ったとき、背面から戻ったときの数え直し
+- `KetsuatsuTests/PhotoReadingOutcomeTests.swift`：読み取りと保存された値の突き合わせ、パラメータに値が入らないこと
 
 ## 横展開
 
