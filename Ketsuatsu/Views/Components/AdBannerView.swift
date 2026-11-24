@@ -15,6 +15,8 @@ final class LevelPlayBannerController: ObservableObject {
 
     @Published private(set) var isReady = false
     private var isStarting = false
+    /// 初期化に失敗したあとの再初期化の間隔と上限（仕様書 1-10）。
+    private var initializationRetry = AdInitializationRetry()
 
     private init() {}
 
@@ -22,6 +24,12 @@ final class LevelPlayBannerController: ObservableObject {
         guard !isReady, !isStarting, AdConfig.isConfigured else { return }
         isStarting = true
         #if DEBUG
+        // 仕様書 1-6：ビルド構成（Debug／Release）で広告を出し分けない。Debug でも本番の広告ユニットへ
+        // 要求が飛ぶので、動作確認は LevelPlay の Test devices に登録した端末でだけ行う。
+        // `setAdaptersDebug` はログを出すだけで、テスト広告になる保証ではない。
+        // 手順は docs/広告の動作確認手順.md。
+        print("[Ads] Debug ビルドでも本番の広告ユニットへ要求します。LevelPlay の Test devices に登録した端末でだけ確認し、広告には触れないでください（docs/広告の動作確認手順.md）")
+        print("[Ads] この端末の IDFV（Test devices に登録する値）: \(UIDevice.current.identifierForVendor?.uuidString ?? "取得できません")")
         LevelPlay.setAdaptersDebug(true)
         #endif
         let request = LPMInitRequestBuilder(appKey: AdConfig.appKey).build()
@@ -33,11 +41,19 @@ final class LevelPlayBannerController: ObservableObject {
                     #if DEBUG
                     print("[Ads] LevelPlay 初期化失敗: \(error.localizedDescription)")
                     #endif
+                    self.initializationRetry.recordFailure()
                     return
                 }
                 self.isReady = true
             }
         }
+    }
+
+    /// 初期化に失敗していたら、間隔と上限の範囲でもう一度初期化する。アプリが前面に出たときに呼ぶ
+    /// （圏外で失敗したまま、アプリを終了するまで広告が出ない状態にしないため）。
+    func retryIfInitializationFailed() {
+        guard !isReady, !isStarting, initializationRetry.shouldRetry() else { return }
+        start()
     }
 }
 

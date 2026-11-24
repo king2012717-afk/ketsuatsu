@@ -16,13 +16,15 @@ enum RecordService {
     /// 1 件を記録する（手入力・写真 1 枚）。
     /// 分析イベントは、永続保存（`context.save()`）に成功した場合だけ送る。
     /// - Parameter reading: 写真から読み取った結果（写真 1 枚のとき）。読み取りが合っていたかの計測に使う。
+    /// - Returns: 追加した記録と、端末に保存できたか（`persisted`）。値が足りず記録を作れなかったときは nil。
+    ///   `persisted` が false でも記録は一覧に表示されるが、アプリを終了すると消えることがある。
     @discardableResult
     static func create(
         from draft: BPDraft,
         reading: BPParseResult? = nil,
         context: ModelContext,
         settings: AppSettings
-    ) async -> BPRecord? {
+    ) async -> (record: BPRecord, persisted: Bool)? {
         guard let result = await insert(draft, context: context, settings: settings) else { return nil }
         if result.persisted {
             if draft.source == .photo {
@@ -30,7 +32,7 @@ enum RecordService {
             }
             logEntryCompleted(method: draft.source == .photo ? .photo : .manual, persistedCount: 1)
         }
-        return result.record
+        return result
     }
 
     /// 写真のまとめて記録で、選ばれた記録を順に保存し、永続保存できた件数を返す。

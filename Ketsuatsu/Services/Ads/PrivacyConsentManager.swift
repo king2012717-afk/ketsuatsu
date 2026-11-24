@@ -60,7 +60,12 @@ final class PrivacyConsentManager {
 
     /// アプリが前面に出たときに呼ぶ。同意済みなら、ATT（未決定のときだけ）→ SDK 初期化へ進む。
     func resumeIfConsented() async {
-        guard let choice, !canRequestAds, !isProcessing else { return }
+        if canRequestAds {
+            // 同意と ATT は済んでいる。SDK の初期化に失敗していたときだけ、ここで再初期化を試す（仕様書 1-10）。
+            LevelPlayBannerController.shared.retryIfInitializationFailed()
+            return
+        }
+        guard let choice, !isProcessing else { return }
         isProcessing = true
         defer { isProcessing = false }
 

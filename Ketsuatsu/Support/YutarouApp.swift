@@ -33,7 +33,8 @@ struct YutarouApp: Decodable, Identifiable, Hashable {
         description = try Self.requiredString(for: .description, in: container)
         category = try Self.requiredString(for: .category, in: container)
         iconURL = Self.decodeURL(for: .iconURL, in: container)
-        iosURL = Self.decodeURL(for: .iosURL, in: container)
+        // タップすると開く先。App Store のページだけを受け付ける（仕様書 4-8：App Store へ送る）。
+        iosURL = Self.decodeURL(for: .iosURL, in: container, allowedHosts: Self.appStoreHosts)
         androidURL = Self.decodeURL(for: .androidURL, in: container)
         published = try container.decodeIfPresent(Bool.self, forKey: .published) ?? false
         weight = max(1, try container.decodeIfPresent(Int.self, forKey: .weight) ?? 1)
@@ -55,16 +56,26 @@ struct YutarouApp: Decodable, Identifiable, Hashable {
         return value
     }
 
+    /// App Store のページのホスト。
+    static let appStoreHosts: Set<String> = ["apps.apple.com"]
+
+    /// URL を読む。`https` だけを受け付ける（`http` や独自スキームは採用しない）。
+    /// `allowedHosts` を渡したときは、そのホストのものだけを受け付ける。
+    ///
+    /// 一覧は公開 JSON から取るため、書き換えられたり誤った値が入ったりしても、
+    /// アプリから意図しない場所を開かないようにする。
     private static func decodeURL(
         for key: CodingKeys,
-        in container: KeyedDecodingContainer<CodingKeys>
+        in container: KeyedDecodingContainer<CodingKeys>,
+        allowedHosts: Set<String>? = nil
     ) -> URL? {
         guard let value = try? container.decodeIfPresent(String.self, forKey: key),
               !value.isEmpty,
               let url = URL(string: value),
-              let scheme = url.scheme?.lowercased(),
-              scheme == "https" || scheme == "http"
+              url.scheme?.lowercased() == "https",
+              let host = url.host?.lowercased(), !host.isEmpty
         else { return nil }
+        if let allowedHosts, !allowedHosts.contains(host) { return nil }
         return url
     }
 }

@@ -1,14 +1,22 @@
 # Firebase Analytics
 
 YutarouLabs の計測共通設計 v2（`yutaroulabs-spec` の `templates/ANALYTICS_TEMPLATE.md`、仕様書 4-7・4-8）に合わせている。
-v2 の共通部品（`AnalyticsProgress.swift` など）の実物は `book` リポジトリにあり、このアプリでは同じ規則を独自に実装している（下表）。
+v2 の共通部品の実物は `book` リポジトリにある。このアプリとの対応は下表のとおり。
+
+**CommonComponentVersion**（仕様書 4-9）: 共通設計 v2。`Ketsuatsu/Services/AnalyticsProgress.swift` は、`book` の `UchiNoHondana/Analytics/AnalyticsProgress.swift`（コミット `697b964`、2026-11-21）と同一の内容。**このファイルは編集しない**（原本が変わったら差し替える）。
 
 | v2 の部品 | このアプリ |
 | --- | --- |
 | `AnalyticsService.swift` | `Ketsuatsu/Services/AnalyticsService.swift`（起動・送信・共通イベント） |
-| `AnalyticsProgress.swift` | `Ketsuatsu/Services/EntryMilestoneTracker.swift`（通算カウンタ・基準値） |
+| `AnalyticsProgress.swift` | `Ketsuatsu/Services/AnalyticsProgress.swift`（原本と同一。`AnalyticsProgress`・`AnalyticsOnce`・`AnalyticsTransactionLedger`）。**3 件目の判定は、いまも `Ketsuatsu/Services/EntryMilestoneTracker.swift` が行う**（下の「独自に持っている部分」） |
 | `AnalyticsVisibility.swift` | `Ketsuatsu/Support/AnalyticsVisibility.swift` と `ImpressionTracker.swift`（半分以上の表示・重複抑止） |
 | `AppAnalytics.swift` | `Ketsuatsu/Services/AppAnalytics.swift`（このアプリ固有のイベント） |
+
+### 独自に持っている部分（仕様書 4-9：独自変更の理由）
+
+`third_entry_completed` の通算カウンタと基準値は、共通部品を置く前から `EntryMilestoneTracker` が持っている。規則は `AnalyticsProgress` と同じ（計測開始時点の件数を基準値にする・保存の成功だけを足す・削除しても減らさない・節目は一度だけ）。
+
+`AnalyticsProgress` へ載せ替えていない理由：配信中の端末に `EntryMilestoneTracker` の値（UserDefaults の 3 つのキー）が保存されており、評価のお願い（`ReviewPromptPolicy`）もこの件数を使っている。載せ替えには保存済みの値の引き継ぎが必要で、誤ると `third_entry_completed` の再送や評価のお願いの出し直しになる。新しく「N 回目」「一度だけ」のイベントを足すときは `AnalyticsProgress`／`AnalyticsOnce` を使う。
 
 ## 構成
 
@@ -145,9 +153,10 @@ YutarouLabs の各アプリで「主要な操作を終えた」ことを同じ�
 
 ## 保存失敗時の動き（画面・ヘルスケアへの影響）
 
-- `context.save()` が失敗しても、画面の動きは従来どおり（記録画面は閉じ、記録はコンテキストに残って一覧に表示される）。
+- `context.save()` が失敗したときは、「保存できませんでした」と知らせてから記録画面を閉じる（まとめて記録は、保存できなかった件数を出す）。記録はコンテキストに残って一覧に表示されるが、アプリを終了すると消えることがある。
+- 永続ストア自体を開けなかったときは、通常の画面の代わりに「記録を開けませんでした」を出し、記録の入力をさせない（`DataStore`）。このときは計測開始時点の基準値（`had_data_at_start`）も記録しない。
 - ヘルスケアへの書き出しも従来どおり行う（一覧に表示されている内容とヘルスケアをそろえるため）。
-- 変わるのは**分析イベントを送らない**ことだけ。
+- 分析イベントは送らない。
 
 ## DebugView での確認
 
@@ -184,6 +193,7 @@ YutarouLabs の各アプリで「主要な操作を終えた」ことを同じ�
 
 Xcode で ⌘U。
 
+- `KetsuatsuTests/AnalyticsProgressTests.swift`：共通部品のテスト（`book` の `Tools/analytics-tests` と同じ内容）
 - `KetsuatsuTests/EntryMilestoneTrackerTests.swift`：新規インストール・再起動・削除と再登録・既存ユーザーの引き継ぎ・まとめて記録の判定、基準値
 - `KetsuatsuTests/ImpressionTrackerTests.swift`：半分以上の表示、スクロールで戻ったとき、背面から戻ったときの数え直し
 - `KetsuatsuTests/PhotoReadingOutcomeTests.swift`：読み取りと保存された値の突き合わせ、パラメータに値が入らないこと

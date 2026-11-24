@@ -1,8 +1,14 @@
+# 2026-11-24：費用削減のため手動実行のみ。ビルド確認は手元の Mac（xcodebuild）と Xcode Cloud で行う
 name: iOS build
 
 # 仕様書 2-14。yutaroulabs-spec の templates/ios.yml を元に、XcodeGen を使わないこのアプリ向けにした。
+# Mac の実行環境は 1 分が 10 分ぶんに数えられる。push・pull_request・schedule では動かさない。
 on:
   workflow_dispatch:
+
+# ビルドするだけなので、トークンには読み取りの権限だけを渡す。
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -10,6 +16,9 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          # チェックアウトのあとはリポジトリへ書き込まないので、認証情報を作業フォルダに残さない。
+          persist-credentials: false
       - name: Select newest Xcode
         # LevelPlay 9.5 以降と Firebase の併用には Xcode 26 以降が必要（仕様書 1-1）。
         run: |

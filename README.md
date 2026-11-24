@@ -95,8 +95,13 @@ open Ketsuatsu.xcodeproj
 ### テスト
 
 ```sh
-xcodebuild test -scheme Ketsuatsu -destination 'platform=iOS Simulator,name=iPhone 16'
+xcodebuild test -project Ketsuatsu.xcodeproj -scheme Ketsuatsu -destination 'platform=iOS Simulator,name=iPhone 18 Pro Max'
 ```
+
+シミュレーターの名前は、その Mac に入っているものを指定します（無い名前だと、テストが始まる前に「Unable to find a device」で止まる）。入っている名前は `xcrun simctl list devices available` で分かります。
+
+**PR を出す前に、手元の Mac でこのビルドとテストが通ることを確かめ、結果を PR の説明に書きます**（2026-11-24 から）。
+GitHub Actions の `iOS build`（`.github/workflows/ios.yml`）は費用削減のため手動実行だけにしてあり、ふだんの確認には使いません。Xcode Cloud は `main` 宛ての PR で動きます（仕様書 2-14）。
 
 OCR の解析ロジック（`BPTextParser`）、液晶の数字の読み取り（`SegmentDisplayReader`・`SevenSegmentReader`。合成した表示と実物の写真）、判定区分、集計、CSV、リマインダーの計算に単体テストがあります。
 
